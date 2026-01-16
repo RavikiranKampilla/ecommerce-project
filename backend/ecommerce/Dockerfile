@@ -1,17 +1,18 @@
-# ---------- BUILD STAGE ----------
-FROM maven:3.9.6-eclipse-temurin-17 AS build
+FROM eclipse-temurin:17-jdk-alpine
+
 WORKDIR /app
 
 COPY pom.xml .
-COPY src ./src
+COPY .mvn .mvn
+COPY mvnw .
 
-RUN mvn clean package -DskipTests
+RUN chmod +x mvnw
+RUN ./mvnw dependency:go-offline
 
-# ---------- RUN STAGE ----------
-FROM eclipse-temurin:17-jre
-WORKDIR /app
+COPY src src
 
-COPY --from=build /app/target/*.jar app.jar
+RUN ./mvnw clean package -DskipTests
 
-EXPOSE 8081
-ENTRYPOINT ["java", "-jar", "app.jar"]
+EXPOSE 8080
+
+CMD ["java", "-jar", "target/*.jar"]
