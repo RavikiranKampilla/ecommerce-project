@@ -1,5 +1,5 @@
 import { createContext, useContext, useEffect, useState } from "react";
-import api from "../utils/api";
+import api from "../api"; // ✅ CORRECT PATH
 
 const CartContext = createContext();
 
@@ -9,14 +9,15 @@ export function CartProvider({ children }) {
     !!localStorage.getItem("token")
   );
 
-  // 🔹 load cart from backend after login
+  // Load cart from backend after login
   useEffect(() => {
     if (!isLoggedIn) {
       setCart([]);
       return;
     }
 
-    api.get("/cart")
+    api
+      .get("/cart")
       .then((res) => setCart(res.data))
       .catch(() => setCart([]));
   }, [isLoggedIn]);
