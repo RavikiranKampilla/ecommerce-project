@@ -2,6 +2,8 @@ import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import "./Auth.css";
 
+const API_BASE = "https://ecommerce-project-7bi8.onrender.com";
+
 function Register() {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
@@ -12,24 +14,24 @@ function Register() {
   const register = async () => {
     setError("");
     try {
-      const res = await fetch("http://localhost:8081/auth/register", {
+      const res = await fetch(`${API_BASE}/auth/register`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ name, email, password }),
       });
 
-      const text = await res.text();
+      const text = await res.text(); // backend returns plain token
 
       if (!res.ok) {
         setError(text || "Registration failed");
         return;
       }
 
-      // ✅ ONLY CHANGE: auto-login after register
-      localStorage.clear();
+      // ✅ SAVE TOKEN (NO clear)
       localStorage.setItem("token", text.trim());
 
-      navigate("/", { replace: true }); // ✅ go inside app
+      // ✅ REDIRECT INTO APP
+      navigate("/", { replace: true });
     } catch {
       setError("Backend not reachable");
     }
