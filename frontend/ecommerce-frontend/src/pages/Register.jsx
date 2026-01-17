@@ -1,36 +1,40 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { useAuth } from "../context/AuthContext";
 import "./Auth.css";
 
 const API_BASE = "https://ecommerce-project-7bi8.onrender.com";
 
 function Register() {
-  const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const navigate = useNavigate();
-  const { login } = useAuth();
 
   const register = async () => {
     setError("");
     try {
       const res = await fetch(`${API_BASE}/auth/register`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name, email, password }),
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          email,
+          password, // ✅ ONLY FIELDS BACKEND EXPECTS
+        }),
       });
 
-      const token = await res.text();
+      const text = await res.text();
 
       if (!res.ok) {
-        setError(token || "Registration failed");
+        setError(text || "Registration failed");
         return;
       }
 
-      // ✅ AUTO LOGIN (GLOBAL STATE)
-      login(token.trim());
+      // ✅ BACKEND RETURNS TOKEN
+      localStorage.setItem("token", text.trim());
+
+      // ✅ GO INSIDE APP
       navigate("/", { replace: true });
     } catch {
       setError("Backend not reachable");
@@ -41,13 +45,7 @@ function Register() {
     <div className="auth-page">
       <div className="auth-card">
         <h2>Create Account</h2>
-
-        <input
-          className="auth-input"
-          placeholder="Name"
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-        />
+        <p>Register as a new user</p>
 
         <input
           className="auth-input"
