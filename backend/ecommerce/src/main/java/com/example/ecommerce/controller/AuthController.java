@@ -15,7 +15,13 @@ import java.util.Optional;
 
 @RestController
 @RequestMapping("/auth")
-@CrossOrigin(origins = "*")
+@CrossOrigin(
+    origins = {
+        "http://localhost:5173",
+        "https://ecommerce-project-five-delta.vercel.app"
+    },
+    allowCredentials = "true"
+)
 public class AuthController {
 
     private final AppUserRepository repo;
@@ -30,7 +36,6 @@ public class AuthController {
         this.jwtUtil = jwtUtil;
     }
 
-    // ✅ REGISTER (UPDATED: returns JWT)
     @PostMapping("/register")
     public ResponseEntity<?> register(@RequestBody AppUser user) {
 
@@ -46,7 +51,6 @@ public class AuthController {
 
         repo.save(user);
 
-        // ✅ generate JWT after successful register
         String token = jwtUtil.generateToken(
                 user.getEmail(),
                 user.getRole()
@@ -55,7 +59,6 @@ public class AuthController {
         return ResponseEntity.ok(token);
     }
 
-    // ✅ LOGIN (UNCHANGED)
     @PostMapping("/login")
     public ResponseEntity<?> login(@RequestBody LoginRequest request) {
 
@@ -69,18 +72,15 @@ public class AuthController {
 
         AppUser user = optionalUser.get();
 
-        boolean match = passwordEncoder.matches(
+        if (!passwordEncoder.matches(
                 request.getPassword(),
-                user.getPassword()
-        );
+                user.getPassword())) {
 
-        if (!match) {
             return ResponseEntity
                     .status(HttpStatus.UNAUTHORIZED)
                     .body("Invalid email or password");
         }
 
-        // ✅ SUCCESS → generate JWT
         String token = jwtUtil.generateToken(
                 user.getEmail(),
                 user.getRole()
