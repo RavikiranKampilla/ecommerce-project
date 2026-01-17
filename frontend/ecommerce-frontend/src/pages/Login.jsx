@@ -15,11 +15,12 @@ function Login() {
     try {
       const res = await fetch(`${API_BASE}/auth/login`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+        },
         body: JSON.stringify({ email, password }),
       });
 
-      // 🔴 backend sends JSON now
       const data = await res.json();
 
       if (!res.ok) {
@@ -30,11 +31,9 @@ function Login() {
       // ✅ SAVE TOKEN
       localStorage.setItem("token", data.token);
 
-      // ✅ FORCE APP TO RECOGNIZE LOGIN
-      window.location.reload();
-
+      // ✅ REDIRECT (NO reload — VERY IMPORTANT)
       navigate("/", { replace: true });
-    } catch (e) {
+    } catch (err) {
       setError("Server error. Please try again.");
     }
   };
