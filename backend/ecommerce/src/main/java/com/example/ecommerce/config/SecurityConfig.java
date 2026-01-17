@@ -32,28 +32,30 @@ public class SecurityConfig {
             // ❌ CSRF not needed for JWT
             .csrf(csrf -> csrf.disable())
 
-            // ✅ ENABLE CORS (will use CorsConfig bean)
+            // ✅ ENABLE CORS (uses CorsConfig)
             .cors(cors -> {})
 
-            // ❌ No sessions (JWT only)
+            // ❌ Stateless JWT
             .sessionManagement(session ->
                 session.sessionCreationPolicy(SessionCreationPolicy.STATELESS)
             )
 
-            // ❌ Disable default auth mechanisms
+            // ❌ Disable default auth
             .formLogin(form -> form.disable())
             .httpBasic(basic -> basic.disable())
 
-            // ✅ Proper 401 handling
+            // ✅ Proper 401
             .exceptionHandling(ex -> ex.authenticationEntryPoint(
-                (request, response, authException) ->
-                    response.sendError(HttpServletResponse.SC_UNAUTHORIZED)
+                (req, res, exx) ->
+                    res.sendError(HttpServletResponse.SC_UNAUTHORIZED)
             ))
 
-            // ✅ AUTH RULES
             .authorizeHttpRequests(auth -> auth
 
-                // PUBLIC ENDPOINTS
+                // 🔥 CRITICAL FIX (CORS PREFLIGHT)
+                .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
+
+                // PUBLIC
                 .requestMatchers(
                     "/auth/**",
                     "/products/**",
@@ -61,11 +63,11 @@ public class SecurityConfig {
                     "/error"
                 ).permitAll()
 
-                // USER ENDPOINTS
+                // USER
                 .requestMatchers(HttpMethod.POST, "/orders").authenticated()
                 .requestMatchers(HttpMethod.GET, "/orders").authenticated()
 
-                // ADMIN ENDPOINTS
+                // ADMIN
                 .requestMatchers("/orders/admin/**").hasRole("ADMIN")
 
                 // EVERYTHING ELSE

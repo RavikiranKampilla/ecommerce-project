@@ -16,18 +16,18 @@ public class CorsConfig {
 
         CorsConfiguration config = new CorsConfiguration();
 
-        // ✅ FRONTEND DOMAINS
+        // ✅ FRONTEND ORIGINS
         config.setAllowedOrigins(List.of(
             "http://localhost:5173",
             "https://ecommerce-project-five-delta.vercel.app"
         ));
 
-        // ✅ METHODS
+        // ✅ METHODS (OPTIONS IS MANDATORY)
         config.setAllowedMethods(List.of(
             "GET", "POST", "PUT", "DELETE", "OPTIONS"
         ));
 
-        // ✅ IMPORTANT: DO NOT USE "*"
+        // ✅ HEADERS USED BY AUTH
         config.setAllowedHeaders(List.of(
             "Authorization",
             "Content-Type"
