@@ -2,6 +2,8 @@ import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import "./Auth.css";
 
+const API_BASE = import.meta.env.VITE_API_URL;
+
 function Login() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -11,28 +13,24 @@ function Login() {
   const login = async () => {
     setError("");
     try {
-      const res = await fetch(
-        "https://<YOUR-BACKEND-URL>/auth/login", // ✅ USE DEPLOYED BACKEND URL
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ email, password }),
-        }
-      );
-
-      const data = await res.json(); // ✅ CHANGED (was res.text())
+      const res = await fetch(`${API_BASE}/auth/login`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, password }),
+      });
 
       if (!res.ok) {
-        setError(data.error || "Invalid email or password");
+        const err = await res.text();
+        setError(err || "Invalid email or password");
         return;
       }
 
-      // ✅ CHANGED: extract token from JSON
+      const data = await res.json(); // ✅ BACKEND RETURNS JSON
       localStorage.clear();
       localStorage.setItem("token", data.token);
 
       navigate("/", { replace: true });
-    } catch (err) {
+    } catch (e) {
       setError("Server error. Please try again.");
     }
   };
