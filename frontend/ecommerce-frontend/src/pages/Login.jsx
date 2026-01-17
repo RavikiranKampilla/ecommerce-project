@@ -11,24 +11,28 @@ function Login() {
   const login = async () => {
     setError("");
     try {
-      const res = await fetch("http://localhost:8081/auth/login", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, password }),
-      });
+      const res = await fetch(
+        "https://<YOUR-BACKEND-URL>/auth/login", // ✅ USE DEPLOYED BACKEND URL
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email, password }),
+        }
+      );
+
+      const data = await res.json(); // ✅ CHANGED (was res.text())
 
       if (!res.ok) {
-        const err = await res.text();
-        setError(err || "Invalid email or password");
+        setError(data.error || "Invalid email or password");
         return;
       }
 
-      const token = (await res.text()).trim();
+      // ✅ CHANGED: extract token from JSON
       localStorage.clear();
-      localStorage.setItem("token", token);
+      localStorage.setItem("token", data.token);
 
       navigate("/", { replace: true });
-    } catch {
+    } catch (err) {
       setError("Server error. Please try again.");
     }
   };
@@ -60,10 +64,8 @@ function Login() {
             Login
           </button>
 
-          {/* error message */}
           {error && <p className="auth-error">{error}</p>}
 
-          {/* ✅ ADDED: forgot password (UI only) */}
           <div className="auth-switch">
             <Link to="/forgot-password">Forgot password?</Link>
           </div>
