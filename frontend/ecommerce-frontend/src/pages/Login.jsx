@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import "./Auth.css";
 
-const API_BASE = import.meta.env.VITE_API_URL;
+const API_BASE = "https://ecommerce-project-7bi8.onrender.com";
 
 function Login() {
   const [email, setEmail] = useState("");
@@ -21,14 +21,12 @@ function Login() {
 
       if (!res.ok) {
         const err = await res.text();
-        setError(err || "Invalid email or password");
+        setError(err);
         return;
       }
 
-      const data = await res.json(); // ✅ BACKEND RETURNS JSON
-      localStorage.clear();
-      localStorage.setItem("token", data.token);
-
+      const token = (await res.text()).trim();
+      localStorage.setItem("token", token);
       navigate("/", { replace: true });
     } catch (e) {
       setError("Server error. Please try again.");
