@@ -19,14 +19,20 @@ function Login() {
         body: JSON.stringify({ email, password }),
       });
 
+      // 🔴 backend sends JSON now
+      const data = await res.json();
+
       if (!res.ok) {
-        const err = await res.text();
-        setError(err);
+        setError(data.error || "Invalid email or password");
         return;
       }
 
-      const token = (await res.text()).trim();
-      localStorage.setItem("token", token);
+      // ✅ SAVE TOKEN
+      localStorage.setItem("token", data.token);
+
+      // ✅ FORCE APP TO RECOGNIZE LOGIN
+      window.location.reload();
+
       navigate("/", { replace: true });
     } catch (e) {
       setError("Server error. Please try again.");

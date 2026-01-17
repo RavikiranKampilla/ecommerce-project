@@ -6,14 +6,10 @@ import api from "../api";
 export default function OrderDetails() {
   const { id } = useParams();
   const [items, setItems] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
 
   useEffect(() => {
     api.get(`/order-items/${id}`)
-      .then(res => setItems(res.data))
-      .catch(() => setError("Failed to load order items"))
-      .finally(() => setLoading(false));
+      .then(res => setItems(res.data));
   }, [id]);
 
   const grandTotal = items.reduce(
@@ -26,19 +22,11 @@ export default function OrderDetails() {
       <Navbar />
 
       <div className="container">
-        <h2 className="section-title">
-          Order Details (#{id})
-        </h2>
+        <h2 className="section-title">Order Details</h2>
 
-        {loading && <p>Loading...</p>}
-
-        {error && <p style={{ color: "red" }}>{error}</p>}
-
-        {!loading && !error && items.length === 0 && (
+        {items.length === 0 ? (
           <p>No items found</p>
-        )}
-
-        {!loading && !error && items.length > 0 && (
+        ) : (
           <>
             <div className="grid">
               {items.map((item, index) => (
