@@ -9,7 +9,7 @@ export default function Home() {
 
   // ✅ LOAD RECOMMENDED PRODUCTS (BACKEND CONTROLLED)
   useEffect(() => {
-    api.get("/products/recommended")
+    api.get("/products")
       .then(res => setProducts(res.data))
       .catch(() => toast.error("Failed to load products"));
   }, []);
