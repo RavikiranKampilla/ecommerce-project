@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
+import { useAuth } from "../context/AuthContext";
 import "./Auth.css";
 
 const API_BASE = "https://ecommerce-project-7bi8.onrender.com";
@@ -9,15 +10,14 @@ function Login() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const navigate = useNavigate();
+  const { login } = useAuth();
 
-  const login = async () => {
+  const handleLogin = async () => {
     setError("");
     try {
       const res = await fetch(`${API_BASE}/auth/login`, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email, password }),
       });
 
@@ -28,12 +28,10 @@ function Login() {
         return;
       }
 
-      // ✅ SAVE TOKEN
-      localStorage.setItem("token", data.token);
-
-      // ✅ REDIRECT (NO reload — VERY IMPORTANT)
+      // ✅ GLOBAL LOGIN
+      login(data.token);
       navigate("/", { replace: true });
-    } catch (err) {
+    } catch {
       setError("Server error. Please try again.");
     }
   };
@@ -61,7 +59,7 @@ function Login() {
             onChange={(e) => setPassword(e.target.value)}
           />
 
-          <button className="auth-btn" onClick={login}>
+          <button className="auth-btn" onClick={handleLogin}>
             Login
           </button>
 

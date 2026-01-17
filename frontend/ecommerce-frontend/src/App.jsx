@@ -29,6 +29,8 @@ function App() {
         <Route path="/product/:id" element={<ProductDetails />} />
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
+        <Route path="/forgot-password" element={<ForgotPassword />} />
+        <Route path="/reset-password" element={<ResetPassword />} />
 
         {/* USER */}
         <Route
@@ -72,10 +74,6 @@ function App() {
           }
         />
 
-        <Route path="/forgot-password" element={<ForgotPassword />} />
-        <Route path="/reset-password" element={<ResetPassword />} />
-
-
         {/* ADMIN */}
         <Route
           path="/admin/orders"
@@ -86,7 +84,7 @@ function App() {
           }
         />
 
-        {/* FALLBACK (NO REDIRECT) */}
+        {/* FALLBACK */}
         <Route path="*" element={<Home />} />
       </Routes>
 

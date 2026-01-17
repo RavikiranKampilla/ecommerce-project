@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
+import { useAuth } from "../context/AuthContext";
 import "./Auth.css";
 
 const API_BASE = "https://ecommerce-project-7bi8.onrender.com";
@@ -10,6 +11,7 @@ function Register() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const navigate = useNavigate();
+  const { login } = useAuth();
 
   const register = async () => {
     setError("");
@@ -20,17 +22,15 @@ function Register() {
         body: JSON.stringify({ name, email, password }),
       });
 
-      const text = await res.text(); // backend returns plain token
+      const token = await res.text();
 
       if (!res.ok) {
-        setError(text || "Registration failed");
+        setError(token || "Registration failed");
         return;
       }
 
-      // ✅ SAVE TOKEN (NO clear)
-      localStorage.setItem("token", text.trim());
-
-      // ✅ REDIRECT INTO APP
+      // ✅ AUTO LOGIN (GLOBAL STATE)
+      login(token.trim());
       navigate("/", { replace: true });
     } catch {
       setError("Backend not reachable");
@@ -41,7 +41,6 @@ function Register() {
     <div className="auth-page">
       <div className="auth-card">
         <h2>Create Account</h2>
-        <p>Register as a new user</p>
 
         <input
           className="auth-input"
