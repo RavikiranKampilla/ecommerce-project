@@ -1,17 +1,15 @@
 import { createContext, useContext, useEffect, useState } from "react";
-import api from "../api"; // ✅ CORRECT PATH
+import api from "../api"; // ✅ correct path
+import { isAuthenticated } from "../utils/auth";
 
 const CartContext = createContext();
 
 export function CartProvider({ children }) {
   const [cart, setCart] = useState([]);
-  const [isLoggedIn, setIsLoggedIn] = useState(
-    !!localStorage.getItem("token")
-  );
 
-  // Load cart from backend after login
+  // Load cart whenever user is authenticated
   useEffect(() => {
-    if (!isLoggedIn) {
+    if (!isAuthenticated()) {
       setCart([]);
       return;
     }
@@ -20,10 +18,10 @@ export function CartProvider({ children }) {
       .get("/cart")
       .then((res) => setCart(res.data))
       .catch(() => setCart([]));
-  }, [isLoggedIn]);
+  }, []);
 
   const addToCart = async (productId, quantity = 1) => {
-    if (!localStorage.getItem("token")) {
+    if (!isAuthenticated()) {
       throw new Error("LOGIN_REQUIRED");
     }
 
@@ -52,8 +50,6 @@ export function CartProvider({ children }) {
         addToCart,
         removeFromCart,
         clearCart,
-        isLoggedIn,
-        setIsLoggedIn,
       }}
     >
       {children}
