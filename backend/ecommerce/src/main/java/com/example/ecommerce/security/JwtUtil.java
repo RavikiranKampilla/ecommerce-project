@@ -1,61 +1,81 @@
-package com.example.ecommerce.security;
+package com.example.ecommerce.controller;
 
-import io.jsonwebtoken.Claims;
-import io.jsonwebtoken.Jwts;
-import io.jsonwebtoken.SignatureAlgorithm;
-import io.jsonwebtoken.security.Keys;
-import org.springframework.stereotype.Component;
+import com.example.ecommerce.entity.AppUser;
+import com.example.ecommerce.repository.AppUserRepository;
+import com.example.ecommerce.dto.LoginRequest;
+import com.example.ecommerce.security.JwtUtil;
+import org.springframework.web.bind.annotation.*;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.http.ResponseEntity;
+import org.springframework.http.HttpStatus;
 
-import java.security.Key;
-import java.util.Date;
+import java.time.LocalDateTime;
+import java.util.Map;
 
-@Component
-public class JwtUtil {
+@RestController
+@RequestMapping("/auth")
+@CrossOrigin(
+    origins = {
+        "http://localhost:5173",
+        "https://ecommerce-project-five-delta.vercel.app"
+    },
+    allowCredentials = "true"
+)
+public class AuthController {
 
-    private static final String SECRET =
-            "my-super-secret-key-my-super-secret-key"; // ≥ 32 chars
+    private final AppUserRepository repo;
+    private final BCryptPasswordEncoder passwordEncoder;
+    private final JwtUtil jwtUtil;
 
-    private static final long EXPIRATION_TIME =
-            24 * 60 * 60 * 1000;
-
-    private Key getKey() {
-        return Keys.hmacShaKeyFor(SECRET.getBytes());
+    public AuthController(AppUserRepository repo,
+                          BCryptPasswordEncoder passwordEncoder,
+                          JwtUtil jwtUtil) {
+        this.repo = repo;
+        this.passwordEncoder = passwordEncoder;
+        this.jwtUtil = jwtUtil;
     }
 
-    public String generateToken(String email, String role) {
-        return Jwts.builder()
-                .setSubject(email)
-                .claim("role", role)
-                .setIssuedAt(new Date())
-                .setExpiration(
-                        new Date(System.currentTimeMillis() + EXPIRATION_TIME)
-                )
-                .signWith(getKey(), SignatureAlgorithm.HS256)
-                .compact();
-    }
+    @PostMapping("/register")
+    public ResponseEntity<?> register(@RequestBody AppUser user) {
 
-    public Claims getClaims(String token) {
-        return Jwts.parserBuilder()
-                .setSigningKey(getKey())
-                .build()
-                .parseClaimsJws(token)
-                .getBody();
-    }
-
-    public String extractEmail(String token) {
-        return getClaims(token).getSubject();
-    }
-
-    public String extractRole(String token) {
-        return getClaims(token).get("role", String.class);
-    }
-
-    public boolean validateToken(String token) {
-        try {
-            getClaims(token);
-            return true;
-        } catch (Exception e) {
-            return false;
+        if (repo.existsByEmail(user.getEmail())) {
+            return ResponseEntity
+                    .status(HttpStatus.BAD_REQUEST)
+                    .body(Map.of("error", "Email already exists"));
         }
+
+        user.setPassword(passwordEncoder.encode(user.getPassword()));
+        user.setRole("ROLE_USER");
+        user.setCreatedAt(LocalDateTime.now());
+
+        repo.save(user);
+
+        String token = jwtUtil.generateToken(
+                user.getEmail(),
+                user.getRole()
+        );
+
+        return ResponseEntity.ok(Map.of("token", token));
+    }
+
+    @PostMapping("/login")
+    public ResponseEntity<?> login(@RequestBody LoginRequest request) {
+
+        AppUser user = repo.findByEmail(request.getEmail())
+                .orElse(null);
+
+        if (user == null ||
+            !passwordEncoder.matches(request.getPassword(), user.getPassword())) {
+            return ResponseEntity
+                    .status(HttpStatus.UNAUTHORIZED)
+                    .body(Map.of("error", "Invalid email or password"));
+        }
+
+        String token = jwtUtil.generateToken(
+                user.getEmail(),
+                user.getRole()
+        );
+
+        return ResponseEntity.ok(Map.of("token", token));
     }
 }

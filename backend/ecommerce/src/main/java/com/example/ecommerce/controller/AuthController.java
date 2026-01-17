@@ -12,6 +12,7 @@ import org.springframework.http.HttpStatus;
 
 import java.time.LocalDateTime;
 import java.util.Optional;
+import java.util.Map; // ✅ ADDED
 
 @RestController
 @RequestMapping("/auth")
@@ -46,7 +47,7 @@ public class AuthController {
         }
 
         user.setPassword(passwordEncoder.encode(user.getPassword()));
-        user.setRole("USER");
+        user.setRole("ROLE_USER"); // ✅ CHANGED (was USER)
         user.setCreatedAt(LocalDateTime.now());
 
         repo.save(user);
@@ -56,7 +57,8 @@ public class AuthController {
                 user.getRole()
         );
 
-        return ResponseEntity.ok(token);
+        // ✅ CHANGED: return JSON instead of plain string
+        return ResponseEntity.ok(Map.of("token", token));
     }
 
     @PostMapping("/login")
@@ -86,6 +88,7 @@ public class AuthController {
                 user.getRole()
         );
 
-        return ResponseEntity.ok(token);
+        // ✅ CHANGED: return JSON instead of plain string
+        return ResponseEntity.ok(Map.of("token", token));
     }
 }
