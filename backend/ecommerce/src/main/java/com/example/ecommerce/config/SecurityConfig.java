@@ -27,38 +27,52 @@ public class SecurityConfig {
 
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
+
         http
+            // ❌ CSRF not needed for JWT
             .csrf(csrf -> csrf.disable())
+
+            // ✅ ENABLE CORS (will use CorsConfig bean)
             .cors(cors -> {})
+
+            // ❌ No sessions (JWT only)
             .sessionManagement(session ->
                 session.sessionCreationPolicy(SessionCreationPolicy.STATELESS)
             )
+
+            // ❌ Disable default auth mechanisms
             .formLogin(form -> form.disable())
             .httpBasic(basic -> basic.disable())
 
-            .exceptionHandling(ex -> ex
-                .authenticationEntryPoint(
-                    (request, response, authException) ->
-                        response.sendError(HttpServletResponse.SC_UNAUTHORIZED)
-                )
-            )
+            // ✅ Proper 401 handling
+            .exceptionHandling(ex -> ex.authenticationEntryPoint(
+                (request, response, authException) ->
+                    response.sendError(HttpServletResponse.SC_UNAUTHORIZED)
+            ))
 
+            // ✅ AUTH RULES
             .authorizeHttpRequests(auth -> auth
+
+                // PUBLIC ENDPOINTS
                 .requestMatchers(
                     "/auth/**",
                     "/products/**",
-                    "/categories/**"
+                    "/categories/**",
+                    "/error"
                 ).permitAll()
 
+                // USER ENDPOINTS
                 .requestMatchers(HttpMethod.POST, "/orders").authenticated()
                 .requestMatchers(HttpMethod.GET, "/orders").authenticated()
 
-                // ✅ FIX: use hasRole when ROLE_ prefix is used
+                // ADMIN ENDPOINTS
                 .requestMatchers("/orders/admin/**").hasRole("ADMIN")
 
+                // EVERYTHING ELSE
                 .anyRequest().authenticated()
             )
 
+            // ✅ JWT FILTER
             .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
