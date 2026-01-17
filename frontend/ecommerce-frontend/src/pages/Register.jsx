@@ -5,6 +5,7 @@ import "./Auth.css";
 const API_BASE = "https://ecommerce-project-7bi8.onrender.com";
 
 function Register() {
+  const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
@@ -12,6 +13,7 @@ function Register() {
 
   const register = async () => {
     setError("");
+
     try {
       const res = await fetch(`${API_BASE}/auth/register`, {
         method: "POST",
@@ -19,24 +21,25 @@ function Register() {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
+          name,
           email,
-          password, // ✅ ONLY FIELDS BACKEND EXPECTS
+          password,
         }),
       });
 
-      const text = await res.text();
+      const data = await res.json();
 
       if (!res.ok) {
-        setError(text || "Registration failed");
+        setError(data.error || "Registration failed");
         return;
       }
 
-      // ✅ BACKEND RETURNS TOKEN
-      localStorage.setItem("token", text.trim());
+      // ✅ SAVE TOKEN
+      localStorage.setItem("token", data.token);
 
-      // ✅ GO INSIDE APP
+      // ✅ GO TO HOME
       navigate("/", { replace: true });
-    } catch {
+    } catch (err) {
       setError("Backend not reachable");
     }
   };
@@ -46,6 +49,13 @@ function Register() {
       <div className="auth-card">
         <h2>Create Account</h2>
         <p>Register as a new user</p>
+
+        <input
+          className="auth-input"
+          placeholder="Name"
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+        />
 
         <input
           className="auth-input"

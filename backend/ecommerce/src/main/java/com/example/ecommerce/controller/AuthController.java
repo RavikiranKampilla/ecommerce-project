@@ -12,16 +12,16 @@ import org.springframework.http.HttpStatus;
 
 import java.time.LocalDateTime;
 import java.util.Optional;
-import java.util.Map; // ✅ ADDED
+import java.util.Map;
 
 @RestController
 @RequestMapping("/auth")
 @CrossOrigin(
     origins = {
         "http://localhost:5173",
-        "https://ecommerce-project-five-delta.vercel.app"
-    },
-    allowCredentials = "true"
+        "https://ecommerce-project-five-delta.vercel.app",
+        "https://ecommerce-project-7bi8.onrender.com"
+    }
 )
 public class AuthController {
 
@@ -43,11 +43,12 @@ public class AuthController {
         if (repo.existsByEmail(user.getEmail())) {
             return ResponseEntity
                     .status(HttpStatus.BAD_REQUEST)
-                    .body("Email already exists");
+                    .body(Map.of("error", "Email already exists"));
         }
 
+        // ✅ REQUIRED FIELDS
         user.setPassword(passwordEncoder.encode(user.getPassword()));
-        user.setRole("ROLE_USER"); // ✅ CHANGED (was USER)
+        user.setRole("USER"); // 🔴 MUST BE "USER" (NOT ROLE_USER)
         user.setCreatedAt(LocalDateTime.now());
 
         repo.save(user);
@@ -57,7 +58,6 @@ public class AuthController {
                 user.getRole()
         );
 
-        // ✅ CHANGED: return JSON instead of plain string
         return ResponseEntity.ok(Map.of("token", token));
     }
 
@@ -69,7 +69,7 @@ public class AuthController {
         if (optionalUser.isEmpty()) {
             return ResponseEntity
                     .status(HttpStatus.UNAUTHORIZED)
-                    .body("Invalid email or password");
+                    .body(Map.of("error", "Invalid email or password"));
         }
 
         AppUser user = optionalUser.get();
@@ -80,7 +80,7 @@ public class AuthController {
 
             return ResponseEntity
                     .status(HttpStatus.UNAUTHORIZED)
-                    .body("Invalid email or password");
+                    .body(Map.of("error", "Invalid email or password"));
         }
 
         String token = jwtUtil.generateToken(
@@ -88,7 +88,6 @@ public class AuthController {
                 user.getRole()
         );
 
-        // ✅ CHANGED: return JSON instead of plain string
         return ResponseEntity.ok(Map.of("token", token));
     }
 }
