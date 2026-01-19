@@ -15,7 +15,7 @@ public class ResendEmailService {
 
     private static final String RESEND_URL = "https://api.resend.com/emails";
 
-    public void sendResetEmail(String toEmail, String resetLink) {
+    public void sendResetLink(String toEmail, String resetLink) {
 
         RestTemplate restTemplate = new RestTemplate();
 

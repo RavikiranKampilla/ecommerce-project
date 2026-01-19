@@ -4,7 +4,7 @@ import com.example.ecommerce.entity.AppUser;
 import com.example.ecommerce.entity.PasswordResetToken;
 import com.example.ecommerce.repository.AppUserRepository;
 import com.example.ecommerce.repository.PasswordResetTokenRepository;
-import com.example.ecommerce.service.EmailService;
+import com.example.ecommerce.service.ResendEmailService;
 
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
@@ -26,20 +26,20 @@ public class PasswordResetController {
 
     private final AppUserRepository userRepo;
     private final PasswordResetTokenRepository tokenRepo;
-    private final EmailService emailService;
+    private final ResendEmailService resendEmailService;
     private final BCryptPasswordEncoder encoder = new BCryptPasswordEncoder();
 
     public PasswordResetController(
             AppUserRepository userRepo,
             PasswordResetTokenRepository tokenRepo,
-            EmailService emailService) {
+            ResendEmailService resendEmailService) {
         this.userRepo = userRepo;
         this.tokenRepo = tokenRepo;
-        this.emailService = emailService;
+        this.resendEmailService = resendEmailService;
     }
 
     // =========================
-    // FORGOT PASSWORD (FIXED)
+    // FORGOT PASSWORD
     // =========================
     @PostMapping("/forgot-password")
     public ResponseEntity<String> forgotPassword(@RequestBody Map<String, String> body) {
@@ -64,9 +64,9 @@ public class PasswordResetController {
                 + token.getToken();
 
             try {
-                emailService.sendResetLink(user.getEmail(), resetLink);
+                resendEmailService.sendResetLink(user.getEmail(), resetLink);
             } catch (Exception e) {
-                System.err.println("Email send failed: " + e.getMessage());
+                System.err.println("Resend email failed: " + e.getMessage());
             }
         });
 
