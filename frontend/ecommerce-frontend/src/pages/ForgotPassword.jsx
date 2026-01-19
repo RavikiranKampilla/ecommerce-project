@@ -16,24 +16,24 @@ function ForgotPassword() {
 
     try {
       const res = await fetch(
-        `${API_BASE}/auth/forgot-password?email=${email}`,
-        { method: "POST" }
+        `${API_BASE}/auth/forgot-password`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",   // ✅ REQUIRED
+          },
+          body: JSON.stringify({ email }),        // ✅ CRITICAL FIX
+        }
       );
 
       const text = await res.text();
 
-      // ✅ CLEAN ERROR HANDLING
       if (!res.ok) {
-        try {
-          const errObj = JSON.parse(text);
-          setError(errObj.error || "Unable to send reset link");
-        } catch {
-          setError("Unable to send reset link");
-        }
+        setError(text || "Unable to send reset link");
         return;
       }
 
-      setMessage(text || "Reset link sent successfully");
+      setMessage(text || "If the email exists, a reset link has been sent");
     } catch {
       setError("Server not reachable");
     }
@@ -41,7 +41,6 @@ function ForgotPassword() {
 
   return (
     <div className="auth-page">
-      {/* ⬅ Back button (top-left) */}
       <div className="auth-top">
         <button className="auth-back" onClick={() => navigate(-1)}>
           ← Back
