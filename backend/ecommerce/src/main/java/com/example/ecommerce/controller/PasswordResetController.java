@@ -28,21 +28,27 @@ public class PasswordResetController {
     private final EmailService emailService;
     private final BCryptPasswordEncoder encoder = new BCryptPasswordEncoder();
 
-    public PasswordResetController(AppUserRepository userRepo,
-                                   PasswordResetTokenRepository tokenRepo,
-                                   EmailService emailService) {
+    public PasswordResetController(
+            AppUserRepository userRepo,
+            PasswordResetTokenRepository tokenRepo,
+            EmailService emailService) {
         this.userRepo = userRepo;
         this.tokenRepo = tokenRepo;
         this.emailService = emailService;
     }
 
     // =========================
-    // FORGOT PASSWORD (SAFE)
+    // FORGOT PASSWORD (FIXED)
     // =========================
     @PostMapping("/forgot-password")
     public ResponseEntity<String> forgotPassword(@RequestParam String email) {
 
         userRepo.findByEmail(email).ifPresent(user -> {
+
+            // ✅ CRITICAL FIX: remove old token if exists
+            tokenRepo.findAll().stream()
+                .filter(t -> t.getUser().getId().equals(user.getId()))
+                .forEach(tokenRepo::delete);
 
             PasswordResetToken token = new PasswordResetToken();
             token.setToken(UUID.randomUUID().toString());
@@ -58,7 +64,7 @@ public class PasswordResetController {
             try {
                 emailService.sendResetLink(user.getEmail(), resetLink);
             } catch (Exception e) {
-                // ❗ DO NOT crash app if mail fails
+                // ❗ Never crash API due to email failure
                 System.err.println("Email send failed: " + e.getMessage());
             }
         });
