@@ -24,14 +24,13 @@ public class ResendEmailService {
         headers.setBearerAuth(resendApiKey);
 
         Map<String, Object> body = Map.of(
-                "from", "Ecommerce <onboarding@resend.dev>",
+                "from", "Ravikiran <ravikiran939039@gmail.com>",
                 "to", new String[]{toEmail},
                 "subject", "Password Reset - E-Commerce",
                 "html",
-                "<p>Click the link below to reset your password:</p>" +
+                "<p>Click below to reset your password:</p>" +
                 "<p><a href=\"" + resetLink + "\">Reset Password</a></p>" +
-                "<p>This link expires in 15 minutes.</p>" +
-                "<p>If you didn’t request this, ignore this email.</p>"
+                "<p>Expires in 15 minutes.</p>"
         );
 
         HttpEntity<Map<String, Object>> request =
@@ -40,8 +39,7 @@ public class ResendEmailService {
         ResponseEntity<String> response =
                 restTemplate.postForEntity(RESEND_URL, request, String.class);
 
-        if (!response.getStatusCode().is2xxSuccessful()) {
-            throw new RuntimeException("Resend email failed: " + response.getBody());
-        }
+        System.out.println("RESEND STATUS: " + response.getStatusCode());
+        System.out.println("RESEND BODY: " + response.getBody());
     }
 }
