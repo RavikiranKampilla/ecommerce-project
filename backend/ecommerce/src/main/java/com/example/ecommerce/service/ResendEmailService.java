@@ -5,6 +5,7 @@ import org.springframework.http.*;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 
+import java.util.HashMap;
 import java.util.Map;
 
 @Service
@@ -15,7 +16,7 @@ public class ResendEmailService {
 
     private static final String RESEND_URL = "https://api.resend.com/emails";
 
-    public void sendResetLink(String toEmail, String resetLink) {
+    public void sendResetEmail(String toEmail, String resetLink) {
 
         RestTemplate restTemplate = new RestTemplate();
 
@@ -23,14 +24,16 @@ public class ResendEmailService {
         headers.setContentType(MediaType.APPLICATION_JSON);
         headers.setBearerAuth(resendApiKey);
 
-        Map<String, Object> body = Map.of(
-                "from", "Ravikiran <ravikiran939039@gmail.com>",
-                "to", new String[]{toEmail},
-                "subject", "Password Reset - E-Commerce",
-                "html",
-                "<p>Click below to reset your password:</p>" +
-                "<p><a href=\"" + resetLink + "\">Reset Password</a></p>" +
-                "<p>Expires in 15 minutes.</p>"
+        Map<String, Object> body = new HashMap<>();
+        body.put("from", "Ecommerce <onboarding@resend.dev>");
+        body.put("to", new String[]{toEmail});
+        body.put("subject", "Password Reset - E-Commerce");
+        body.put(
+            "html",
+            "<p>Click the link below to reset your password:</p>" +
+            "<p><a href=\"" + resetLink + "\">Reset Password</a></p>" +
+            "<p>This link expires in 15 minutes.</p>" +
+            "<p>If you didn’t request this, ignore this email.</p>"
         );
 
         HttpEntity<Map<String, Object>> request =
@@ -39,7 +42,8 @@ public class ResendEmailService {
         ResponseEntity<String> response =
                 restTemplate.postForEntity(RESEND_URL, request, String.class);
 
-        System.out.println("RESEND STATUS: " + response.getStatusCode());
-        System.out.println("RESEND BODY: " + response.getBody());
+        if (!response.getStatusCode().is2xxSuccessful()) {
+            throw new RuntimeException("Resend failed: " + response.getBody());
+        }
     }
 }

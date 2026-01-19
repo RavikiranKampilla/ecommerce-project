@@ -32,7 +32,8 @@ public class PasswordResetController {
     public PasswordResetController(
             AppUserRepository userRepo,
             PasswordResetTokenRepository tokenRepo,
-            ResendEmailService resendEmailService) {
+            ResendEmailService resendEmailService
+    ) {
         this.userRepo = userRepo;
         this.tokenRepo = tokenRepo;
         this.resendEmailService = resendEmailService;
@@ -42,15 +43,17 @@ public class PasswordResetController {
     // FORGOT PASSWORD
     // =========================
     @PostMapping("/forgot-password")
-    public ResponseEntity<String> forgotPassword(@RequestBody Map<String, String> body) {
+    public ResponseEntity<String> forgotPassword(
+            @RequestBody Map<String, String> body
+    ) {
 
         String email = body.get("email");
 
         userRepo.findByEmail(email).ifPresent(user -> {
 
             tokenRepo.findAll().stream()
-                .filter(t -> t.getUser().getId().equals(user.getId()))
-                .forEach(tokenRepo::delete);
+                    .filter(t -> t.getUser().getId().equals(user.getId()))
+                    .forEach(tokenRepo::delete);
 
             PasswordResetToken token = new PasswordResetToken();
             token.setToken(UUID.randomUUID().toString());
@@ -63,11 +66,7 @@ public class PasswordResetController {
                 "https://ecommerce-project-five-delta.vercel.app/reset-password?token="
                 + token.getToken();
 
-            try {
-                resendEmailService.sendResetLink(user.getEmail(), resetLink);
-            } catch (Exception e) {
-                System.err.println("Resend email failed: " + e.getMessage());
-            }
+            resendEmailService.sendResetEmail(user.getEmail(), resetLink);
         });
 
         return ResponseEntity.ok(
@@ -81,10 +80,11 @@ public class PasswordResetController {
     @PostMapping("/reset-password")
     public ResponseEntity<String> resetPassword(
             @RequestParam String token,
-            @RequestParam String newPassword) {
+            @RequestParam String newPassword
+    ) {
 
         PasswordResetToken resetToken = tokenRepo.findByToken(token)
-            .orElseThrow(() -> new RuntimeException("Invalid token"));
+                .orElseThrow(() -> new RuntimeException("Invalid token"));
 
         if (resetToken.getExpiryTime().isBefore(LocalDateTime.now())) {
             throw new RuntimeException("Token expired");
