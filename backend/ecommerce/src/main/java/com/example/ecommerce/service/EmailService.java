@@ -10,7 +10,6 @@ public class EmailService {
 
     private final JavaMailSender mailSender;
 
-    // ✅ reads MAIL_USER from environment (Render / local)
     @Value("${spring.mail.username}")
     private String fromEmail;
 
@@ -21,15 +20,16 @@ public class EmailService {
     public void sendResetLink(String toEmail, String link) {
 
         SimpleMailMessage message = new SimpleMailMessage();
-        message.setFrom(fromEmail);   // ✅ CRITICAL FIX
+        message.setFrom(fromEmail);          // REQUIRED FOR GMAIL
         message.setTo(toEmail);
         message.setSubject("Password Reset - E-Commerce");
         message.setText(
-            "Click the link below to reset your password:\n\n" +
-            link + "\n\n" +
-            "This link expires in 15 minutes."
+                "Click the link below to reset your password:\n\n" +
+                link + "\n\n" +
+                "This link expires in 15 minutes.\n\n" +
+                "If you did not request this, ignore this email."
         );
 
-        mailSender.send(message);     // ✅ will work now
+        mailSender.send(message);
     }
 }
