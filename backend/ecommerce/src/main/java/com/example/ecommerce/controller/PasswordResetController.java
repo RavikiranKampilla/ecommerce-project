@@ -38,17 +38,15 @@ public class PasswordResetController {
     }
 
     // =========================
-    // FORGOT PASSWORD (FIXED)
+    // FORGOT PASSWORD (FINAL FIX)
     // =========================
     @PostMapping("/forgot-password")
     public ResponseEntity<String> forgotPassword(@RequestParam String email) {
 
         userRepo.findByEmail(email).ifPresent(user -> {
 
-            // ✅ CRITICAL FIX: remove old token if exists
-            tokenRepo.findAll().stream()
-                .filter(t -> t.getUser().getId().equals(user.getId()))
-                .forEach(tokenRepo::delete);
+            // ✅ DELETE OLD TOKEN (DB LEVEL – SAFE)
+            tokenRepo.deleteByUser(user);
 
             PasswordResetToken token = new PasswordResetToken();
             token.setToken(UUID.randomUUID().toString());
@@ -64,12 +62,12 @@ public class PasswordResetController {
             try {
                 emailService.sendResetLink(user.getEmail(), resetLink);
             } catch (Exception e) {
-                // ❗ Never crash API due to email failure
+                // ❗ NEVER BREAK API DUE TO MAIL
                 System.err.println("Email send failed: " + e.getMessage());
             }
         });
 
-        // ✅ SAME RESPONSE ALWAYS (SECURITY)
+        // ✅ SAME RESPONSE ALWAYS (SECURITY BEST PRACTICE)
         return ResponseEntity.ok(
             "If the email exists, a password reset link has been sent"
         );
