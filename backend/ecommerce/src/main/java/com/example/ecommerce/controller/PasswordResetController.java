@@ -11,6 +11,7 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDateTime;
+import java.util.Map;
 import java.util.UUID;
 
 @RestController
@@ -38,15 +39,18 @@ public class PasswordResetController {
     }
 
     // =========================
-    // FORGOT PASSWORD (FINAL FIX)
+    // FORGOT PASSWORD (FIXED)
     // =========================
     @PostMapping("/forgot-password")
-    public ResponseEntity<String> forgotPassword(@RequestParam String email) {
+    public ResponseEntity<String> forgotPassword(@RequestBody Map<String, String> body) {
+
+        String email = body.get("email");
 
         userRepo.findByEmail(email).ifPresent(user -> {
 
-            // ✅ DELETE OLD TOKEN (DB LEVEL – SAFE)
-            tokenRepo.deleteByUser(user);
+            tokenRepo.findAll().stream()
+                .filter(t -> t.getUser().getId().equals(user.getId()))
+                .forEach(tokenRepo::delete);
 
             PasswordResetToken token = new PasswordResetToken();
             token.setToken(UUID.randomUUID().toString());
@@ -62,12 +66,10 @@ public class PasswordResetController {
             try {
                 emailService.sendResetLink(user.getEmail(), resetLink);
             } catch (Exception e) {
-                // ❗ NEVER BREAK API DUE TO MAIL
                 System.err.println("Email send failed: " + e.getMessage());
             }
         });
 
-        // ✅ SAME RESPONSE ALWAYS (SECURITY BEST PRACTICE)
         return ResponseEntity.ok(
             "If the email exists, a password reset link has been sent"
         );
