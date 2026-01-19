@@ -19,15 +19,9 @@
 
 /* smooth background motion */
 @keyframes gradientMove {
-  0% {
-    background-position: 0% 50%;
-  }
-  50% {
-    background-position: 100% 50%;
-  }
-  100% {
-    background-position: 0% 50%;
-  }
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
 }
 
 /* ===== BRAND NAME ===== */
@@ -144,6 +138,7 @@
   text-align: center;
 }
 
+/* ===== EMPTY STATE ===== */
 .empty-state {
   margin-top: 80px;
   text-align: center;
@@ -174,6 +169,7 @@
   opacity: 0.85;
 }
 
+/* ===== FADE IN ===== */
 .fade-in {
   animation: fadeIn 0.5s ease-in-out;
 }
@@ -189,42 +185,77 @@
   }
 }
 
-/* ===== AUTH TOP BAR ===== */
+/* ===================================================== */
+/* =============== FIXED ADDITIONS ONLY ================= */
+/* ===================================================== */
+
+/* ===== BACK BUTTON (TOP LEFT, NO BAR) ===== */
 .auth-top {
-  position: absolute;
-  top: 24px;
-  width: 100%;
+  position: fixed;
+  top: 16px;
+  left: 16px;
+  width: auto;
   display: flex;
   align-items: center;
-  justify-content: center;
+  justify-content: flex-start;
+  z-index: 1000;
 }
 
 .auth-back {
-  position: absolute;
-  left: 24px;
-  background: none;
+  background: transparent;
   border: none;
-  font-size: 15px;
-  font-weight: 500;
+  font-size: 14px;
+  font-weight: 600;
   cursor: pointer;
 }
 
-.auth-title {
-  font-size: 26px;
-  font-weight: 700;
-  letter-spacing: 1px;
-  color: #111;
+/* hide top title only (card title remains) */
+/* .auth-title {
+  display: none;
+} */
+
+/* ===== FORGOT PASSWORD (BELOW LOGIN, CENTER) ===== */
+.auth-btn {
+  order: 3;
 }
 
-/* ===== FORGOT PASSWORD ===== */
 .auth-forgot {
+  order: 4;
   width: 100%;
-  text-align: right;
-  margin-bottom: 12px;
+  text-align: center;
+  margin: 12px 0 0;
   font-size: 13px;
 }
 
 .auth-forgot a {
   color: #2563eb;
   font-weight: 600;
+}
+
+.auth-switch {
+  order: 5;
+}
+
+/* ===== MAKE BACK BUTTON VISIBLE & CLEAN ===== */
+.auth-back {
+  background: rgba(17, 17, 17, 0.08); /* subtle pill */
+  color: #111;                        /* dark text */
+  padding: 6px 12px;
+  border-radius: 999px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  backdrop-filter: blur(4px);
+}
+
+.auth-back:hover {
+  background: rgba(17, 17, 17, 0.15);
+}
+/* ===== FIX BRAND CENTER ALIGNMENT ===== */
+.auth-page {
+  flex-direction: column;
+}
+
+.auth-brand {
+  margin-bottom: 24px;
 }

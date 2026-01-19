@@ -4,7 +4,9 @@ import com.example.ecommerce.entity.AppUser;
 import com.example.ecommerce.entity.PasswordResetToken;
 import com.example.ecommerce.repository.AppUserRepository;
 import com.example.ecommerce.repository.PasswordResetTokenRepository;
-import com.example.ecommerce.service.EmailService;   // ✅ added
+import com.example.ecommerce.service.EmailService;
+
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.web.bind.annotation.*;
 
@@ -13,15 +15,19 @@ import java.util.UUID;
 
 @RestController
 @RequestMapping("/auth")
-@CrossOrigin(origins = "http://localhost:5173")
+@CrossOrigin(
+    origins = {
+        "http://localhost:5173",
+        "https://ecommerce-project-five-delta.vercel.app"
+    }
+)
 public class PasswordResetController {
 
     private final AppUserRepository userRepo;
     private final PasswordResetTokenRepository tokenRepo;
-    private final EmailService emailService;          // ✅ added
+    private final EmailService emailService;
     private final BCryptPasswordEncoder encoder = new BCryptPasswordEncoder();
 
-    // ✅ updated constructor
     public PasswordResetController(AppUserRepository userRepo,
                                    PasswordResetTokenRepository tokenRepo,
                                    EmailService emailService) {
@@ -30,34 +36,49 @@ public class PasswordResetController {
         this.emailService = emailService;
     }
 
-    // ✅ FORGOT PASSWORD
+    // =========================
+    // FORGOT PASSWORD (SAFE)
+    // =========================
     @PostMapping("/forgot-password")
-    public String forgotPassword(@RequestParam String email) {
+    public ResponseEntity<String> forgotPassword(@RequestParam String email) {
 
-        AppUser user = userRepo.findByEmail(email)
-                .orElseThrow(() -> new RuntimeException("Email not registered"));
+        userRepo.findByEmail(email).ifPresent(user -> {
 
-        PasswordResetToken token = new PasswordResetToken();
-        token.setToken(UUID.randomUUID().toString());
-        token.setUser(user);
-        token.setExpiryTime(LocalDateTime.now().plusMinutes(15));
+            PasswordResetToken token = new PasswordResetToken();
+            token.setToken(UUID.randomUUID().toString());
+            token.setUser(user);
+            token.setExpiryTime(LocalDateTime.now().plusMinutes(15));
 
-        tokenRepo.save(token);
+            tokenRepo.save(token);
 
-        // ✅ SEND EMAIL (replaced console log)
-        String link = "http://localhost:5173/reset-password?token=" + token.getToken();
-        emailService.sendResetLink(user.getEmail(), link);
+            String resetLink =
+                "https://ecommerce-project-five-delta.vercel.app/reset-password?token="
+                + token.getToken();
 
-        return "Password reset link sent to email";
+            try {
+                emailService.sendResetLink(user.getEmail(), resetLink);
+            } catch (Exception e) {
+                // ❗ DO NOT crash app if mail fails
+                System.err.println("Email send failed: " + e.getMessage());
+            }
+        });
+
+        // ✅ SAME RESPONSE ALWAYS (SECURITY)
+        return ResponseEntity.ok(
+            "If the email exists, a password reset link has been sent"
+        );
     }
 
-    // ✅ RESET PASSWORD
+    // =========================
+    // RESET PASSWORD
+    // =========================
     @PostMapping("/reset-password")
-    public String resetPassword(@RequestParam String token,
-                                @RequestParam String newPassword) {
+    public ResponseEntity<String> resetPassword(
+            @RequestParam String token,
+            @RequestParam String newPassword) {
 
         PasswordResetToken resetToken = tokenRepo.findByToken(token)
-                .orElseThrow(() -> new RuntimeException("Invalid token"));
+            .orElseThrow(() -> new RuntimeException("Invalid token"));
 
         if (resetToken.getExpiryTime().isBefore(LocalDateTime.now())) {
             throw new RuntimeException("Token expired");
@@ -69,6 +90,6 @@ public class PasswordResetController {
 
         tokenRepo.delete(resetToken);
 
-        return "Password updated successfully";
+        return ResponseEntity.ok("Password updated successfully");
     }
 }

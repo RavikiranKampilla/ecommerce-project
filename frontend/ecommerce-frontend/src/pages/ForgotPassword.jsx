@@ -2,11 +2,13 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import "./Auth.css";
 
+const API_BASE = "https://ecommerce-project-7bi8.onrender.com";
+
 function ForgotPassword() {
   const [email, setEmail] = useState("");
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
-  const navigate = useNavigate(); // ✅ ADDED
+  const navigate = useNavigate();
 
   const submit = async () => {
     setMessage("");
@@ -14,18 +16,24 @@ function ForgotPassword() {
 
     try {
       const res = await fetch(
-        `http://localhost:8081/auth/forgot-password?email=${email}`,
+        `${API_BASE}/auth/forgot-password?email=${email}`,
         { method: "POST" }
       );
 
       const text = await res.text();
 
+      // ✅ CLEAN ERROR HANDLING
       if (!res.ok) {
-        setError(text);
+        try {
+          const errObj = JSON.parse(text);
+          setError(errObj.error || "Unable to send reset link");
+        } catch {
+          setError("Unable to send reset link");
+        }
         return;
       }
 
-      setMessage(text);
+      setMessage(text || "Reset link sent successfully");
     } catch {
       setError("Server not reachable");
     }
@@ -33,6 +41,13 @@ function ForgotPassword() {
 
   return (
     <div className="auth-page">
+      {/* ⬅ Back button (top-left) */}
+      <div className="auth-top">
+        <button className="auth-back" onClick={() => navigate(-1)}>
+          ← Back
+        </button>
+      </div>
+
       <div className="auth-card">
         <h2>Forgot Password</h2>
         <p>Enter your registered email</p>
@@ -50,25 +65,6 @@ function ForgotPassword() {
 
         {error && <p className="auth-error">{error}</p>}
         {message && <p className="auth-success">{message}</p>}
-
-        {/* ✅ BACK NAVIGATION (ONLY ADDITION) */}
-        <div style={{ marginTop: 16, textAlign: "center" }}>
-          <button
-            className="auth-link"
-            onClick={() => navigate("/login")}
-          >
-            ← Back to Login
-          </button>
-
-          <br />
-
-          <button
-            className="auth-link"
-            onClick={() => navigate("/")}
-          >
-            Go to Home
-          </button>
-        </div>
       </div>
     </div>
   );

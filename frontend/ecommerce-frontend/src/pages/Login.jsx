@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
+import { useAuth } from "../context/AuthContext";
 import "./Auth.css";
 
 const API_BASE = "https://ecommerce-project-7bi8.onrender.com";
@@ -9,6 +10,7 @@ function Login() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const navigate = useNavigate();
+  const { login: authLogin } = useAuth();
 
   const login = async () => {
     setError("");
@@ -16,33 +18,42 @@ function Login() {
     try {
       const res = await fetch(`${API_BASE}/auth/login`, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email, password }),
       });
 
-      const data = await res.json();
+      const text = await res.text(); // ✅ SAFE
 
+      // ✅ HANDLE ERROR RESPONSE CLEANLY
       if (!res.ok) {
-        setError(data || "Invalid email or password");
+        try {
+          const errObj = JSON.parse(text);
+          setError(errObj.error || "Invalid email or password");
+        } catch {
+          setError(text || "Invalid email or password");
+        }
         return;
       }
 
-      localStorage.setItem("token", data.token);
+      // ✅ SUCCESS RESPONSE
+      const data = JSON.parse(text);
+
+      authLogin(data.token);
       navigate("/", { replace: true });
-    } catch (err) {
+    } catch {
       setError("Server error. Please try again.");
     }
   };
 
   return (
     <div className="auth-page">
-      {/* 🔹 ADDED: Top bar */}
       <div className="auth-top">
-        <button className="auth-back" onClick={() => navigate(-1)}>← Back</button>
-        <h1 className="auth-title">E-Commerce</h1>
+        <button className="auth-back" onClick={() => navigate("/")}>
+          ← Back
+        </button>
       </div>
+
+      <div className="auth-brand">E-Commerce</div>
 
       <div className="auth-card">
         <h2>Welcome Back</h2>
@@ -62,7 +73,6 @@ function Login() {
           onChange={(e) => setPassword(e.target.value)}
         />
 
-        {/* 🔹 ADDED: Forgot password */}
         <div className="auth-forgot">
           <Link to="/forgot-password">Forgot password?</Link>
         </div>
