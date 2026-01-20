@@ -25,7 +25,7 @@ public class PasswordResetService {
         this.mailSender = mailSender;
     }
 
-    // 🔒 DB ONLY
+    // 🔒 DB TRANSACTION ONLY
     @Transactional
     public String createToken(AppUser user) {
 
@@ -38,19 +38,23 @@ public class PasswordResetService {
 
         tokenRepo.save(token);
 
-        return token.getToken(); // 🔥 TRANSACTION ENDS HERE
+        return token.getToken();
     }
 
-    // 📧 NO TRANSACTION
+    // 📧 EMAIL (NO TRANSACTION)
     public void sendResetEmail(String email, String link) {
 
         SimpleMailMessage message = new SimpleMailMessage();
-        message.setFrom("Ecommerce Support <no-reply@ecommerce.com>");
+
+        // ✅ MUST be a VERIFIED Brevo sender email (NO angle brackets)
+        message.setFrom("ravikiran93903@gmail.com");
+
         message.setTo(email);
         message.setSubject("Reset Your Password");
         message.setText(
-            "Click the link below to reset your password:\n\n" +
-            link + "\n\nThis link expires in 15 minutes."
+                "Click the link below to reset your password:\n\n" +
+                link +
+                "\n\nThis link expires in 15 minutes."
         );
 
         mailSender.send(message);
