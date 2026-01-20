@@ -25,7 +25,9 @@ public class PasswordResetService {
         this.mailSender = mailSender;
     }
 
-    // 🔒 DB TRANSACTION ONLY
+    // ======================
+    // DB TRANSACTION ONLY
+    // ======================
     @Transactional
     public String createToken(AppUser user) {
 
@@ -37,26 +39,33 @@ public class PasswordResetService {
         token.setExpiryTime(LocalDateTime.now().plusMinutes(15));
 
         tokenRepo.save(token);
-
         return token.getToken();
     }
 
-    // 📧 EMAIL (NO TRANSACTION)
+    // ======================
+    // EMAIL (NO TRANSACTION)
+    // ======================
     public void sendResetEmail(String email, String link) {
 
-        SimpleMailMessage message = new SimpleMailMessage();
+        try {
+            SimpleMailMessage message = new SimpleMailMessage();
 
-        // ✅ MUST be a VERIFIED Brevo sender email (NO angle brackets)
-        message.setFrom("ravikiran93903@gmail.com");
+            // ✅ MUST MATCH VERIFIED BREVO SENDER EXACTLY
+            message.setFrom("ravikiran939039@gmail.com");
 
-        message.setTo(email);
-        message.setSubject("Reset Your Password");
-        message.setText(
+            message.setTo(email);
+            message.setSubject("Reset Your Password");
+            message.setText(
                 "Click the link below to reset your password:\n\n" +
                 link +
                 "\n\nThis link expires in 15 minutes."
-        );
+            );
 
-        mailSender.send(message);
+            mailSender.send(message);
+
+        } catch (Exception e) {
+            e.printStackTrace();
+            throw new RuntimeException("Email sending failed");
+        }
     }
 }
