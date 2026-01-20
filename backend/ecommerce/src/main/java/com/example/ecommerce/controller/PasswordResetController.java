@@ -42,22 +42,28 @@ public class PasswordResetController {
     // FORGOT PASSWORD
     // =========================
     @PostMapping("/forgot-password")
-    public ResponseEntity<String> forgotPassword(
-            @RequestBody Map<String, String> body
-    ) {
-        String email = body.get("email");
+public ResponseEntity<String> forgotPassword(
+        @RequestBody Map<String, String> body
+) {
+    String email = body.get("email");
 
-        userRepo.findByEmail(email).ifPresent(user ->
-            passwordResetService.createTokenAndSendEmail(
-                user,
-                "https://ecommerce-project-five-delta.vercel.app"
-            )
-        );
+    userRepo.findByEmail(email).ifPresent(user -> {
 
-        return ResponseEntity.ok(
-            "If the email exists, a password reset link has been sent"
-        );
-    }
+        String token =
+            passwordResetService.createToken(user);
+
+        String link =
+            "https://ecommerce-project-five-delta.vercel.app/reset-password?token="
+            + token;
+
+        passwordResetService.sendResetEmail(user.getEmail(), link);
+    });
+
+    return ResponseEntity.ok(
+        "If the email exists, a password reset link has been sent"
+    );
+}
+
 
     // =========================
     // RESET PASSWORD

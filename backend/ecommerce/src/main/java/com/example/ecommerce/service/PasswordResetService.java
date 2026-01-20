@@ -14,21 +14,21 @@ import java.util.UUID;
 @Service
 public class PasswordResetService {
 
-    private final JavaMailSender mailSender;
     private final PasswordResetTokenRepository tokenRepo;
+    private final JavaMailSender mailSender;
 
     public PasswordResetService(
-            JavaMailSender mailSender,
-            PasswordResetTokenRepository tokenRepo
+            PasswordResetTokenRepository tokenRepo,
+            JavaMailSender mailSender
     ) {
-        this.mailSender = mailSender;
         this.tokenRepo = tokenRepo;
+        this.mailSender = mailSender;
     }
 
+    // 🔒 DB ONLY
     @Transactional
-    public void createTokenAndSendEmail(AppUser user, String frontendUrl) {
+    public String createToken(AppUser user) {
 
-        // delete old token safely (NOW inside transaction)
         tokenRepo.deleteByUser(user);
 
         PasswordResetToken token = new PasswordResetToken();
@@ -38,17 +38,19 @@ public class PasswordResetService {
 
         tokenRepo.save(token);
 
-        String resetLink =
-                frontendUrl + "/reset-password?token=" + token.getToken();
+        return token.getToken(); // 🔥 TRANSACTION ENDS HERE
+    }
+
+    // 📧 NO TRANSACTION
+    public void sendResetEmail(String email, String link) {
 
         SimpleMailMessage message = new SimpleMailMessage();
         message.setFrom("Ecommerce Support <no-reply@ecommerce.com>");
-        message.setTo(user.getEmail());
+        message.setTo(email);
         message.setSubject("Reset Your Password");
         message.setText(
-                "Click the link below to reset your password:\n\n" +
-                resetLink +
-                "\n\nThis link expires in 15 minutes."
+            "Click the link below to reset your password:\n\n" +
+            link + "\n\nThis link expires in 15 minutes."
         );
 
         mailSender.send(message);
