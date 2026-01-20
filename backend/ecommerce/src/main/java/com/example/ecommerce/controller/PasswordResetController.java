@@ -8,6 +8,7 @@ import com.example.ecommerce.service.PasswordResetService;
 
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDateTime;
@@ -43,6 +44,7 @@ public class PasswordResetController {
     // FORGOT PASSWORD
     // =========================
     @PostMapping("/forgot-password")
+    @Transactional
     public ResponseEntity<String> forgotPassword(
             @RequestBody Map<String, String> body
     ) {
@@ -51,6 +53,7 @@ public class PasswordResetController {
 
         userRepo.findByEmail(email).ifPresent(user -> {
 
+            // ✅ now runs inside transaction
             tokenRepo.deleteByUser(user);
 
             PasswordResetToken token = new PasswordResetToken();
