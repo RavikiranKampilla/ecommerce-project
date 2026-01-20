@@ -8,12 +8,10 @@ import com.example.ecommerce.service.PasswordResetService;
 
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
-import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDateTime;
 import java.util.Map;
-import java.util.UUID;
 
 @RestController
 @RequestMapping("/auth")
@@ -44,31 +42,17 @@ public class PasswordResetController {
     // FORGOT PASSWORD
     // =========================
     @PostMapping("/forgot-password")
-    @Transactional
     public ResponseEntity<String> forgotPassword(
             @RequestBody Map<String, String> body
     ) {
-
         String email = body.get("email");
 
-        userRepo.findByEmail(email).ifPresent(user -> {
-
-            // ✅ now runs inside transaction
-            tokenRepo.deleteByUser(user);
-
-            PasswordResetToken token = new PasswordResetToken();
-            token.setToken(UUID.randomUUID().toString());
-            token.setUser(user);
-            token.setExpiryTime(LocalDateTime.now().plusMinutes(15));
-
-            tokenRepo.save(token);
-
-            String resetLink =
-                "https://ecommerce-project-five-delta.vercel.app/reset-password?token="
-                + token.getToken();
-
-            passwordResetService.sendResetEmail(user.getEmail(), resetLink);
-        });
+        userRepo.findByEmail(email).ifPresent(user ->
+            passwordResetService.createTokenAndSendEmail(
+                user,
+                "https://ecommerce-project-five-delta.vercel.app"
+            )
+        );
 
         return ResponseEntity.ok(
             "If the email exists, a password reset link has been sent"

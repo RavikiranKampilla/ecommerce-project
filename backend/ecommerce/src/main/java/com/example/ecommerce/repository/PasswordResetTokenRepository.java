@@ -3,6 +3,8 @@ package com.example.ecommerce.repository;
 import com.example.ecommerce.entity.PasswordResetToken;
 import com.example.ecommerce.entity.AppUser;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Optional;
 
@@ -11,6 +13,7 @@ public interface PasswordResetTokenRepository
 
     Optional<PasswordResetToken> findByToken(String token);
 
-    // ✅ CRITICAL FIX (delete old token before creating new)
+    @Modifying
+    @Transactional
     void deleteByUser(AppUser user);
 }
