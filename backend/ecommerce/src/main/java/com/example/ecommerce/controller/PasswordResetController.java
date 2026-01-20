@@ -4,7 +4,7 @@ import com.example.ecommerce.entity.AppUser;
 import com.example.ecommerce.entity.PasswordResetToken;
 import com.example.ecommerce.repository.AppUserRepository;
 import com.example.ecommerce.repository.PasswordResetTokenRepository;
-import com.example.ecommerce.service.ResendEmailService;
+import com.example.ecommerce.service.PasswordResetService;
 
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
@@ -26,17 +26,17 @@ public class PasswordResetController {
 
     private final AppUserRepository userRepo;
     private final PasswordResetTokenRepository tokenRepo;
-    private final ResendEmailService resendEmailService;
+    private final PasswordResetService passwordResetService;
     private final BCryptPasswordEncoder encoder = new BCryptPasswordEncoder();
 
     public PasswordResetController(
             AppUserRepository userRepo,
             PasswordResetTokenRepository tokenRepo,
-            ResendEmailService resendEmailService
+            PasswordResetService passwordResetService
     ) {
         this.userRepo = userRepo;
         this.tokenRepo = tokenRepo;
-        this.resendEmailService = resendEmailService;
+        this.passwordResetService = passwordResetService;
     }
 
     // =========================
@@ -51,9 +51,7 @@ public class PasswordResetController {
 
         userRepo.findByEmail(email).ifPresent(user -> {
 
-            tokenRepo.findAll().stream()
-                    .filter(t -> t.getUser().getId().equals(user.getId()))
-                    .forEach(tokenRepo::delete);
+            tokenRepo.deleteByUser(user);
 
             PasswordResetToken token = new PasswordResetToken();
             token.setToken(UUID.randomUUID().toString());
@@ -66,7 +64,7 @@ public class PasswordResetController {
                 "https://ecommerce-project-five-delta.vercel.app/reset-password?token="
                 + token.getToken();
 
-            resendEmailService.sendResetEmail(user.getEmail(), resetLink);
+            passwordResetService.sendResetEmail(user.getEmail(), resetLink);
         });
 
         return ResponseEntity.ok(

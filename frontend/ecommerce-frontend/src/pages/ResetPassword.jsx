@@ -2,6 +2,8 @@ import { useState } from "react";
 import { useSearchParams, useNavigate } from "react-router-dom";
 import "./Auth.css";
 
+const API_BASE = "https://ecommerce-project-7bi8.onrender.com"; // ✅ ADD
+
 function ResetPassword() {
   const [params] = useSearchParams();
   const navigate = useNavigate();
@@ -17,7 +19,7 @@ function ResetPassword() {
 
     try {
       const res = await fetch(
-        `http://localhost:8081/auth/reset-password?token=${token}&newPassword=${password}`,
+        `${API_BASE}/auth/reset-password?token=${token}&newPassword=${password}`, // ✅ FIX
         { method: "POST" }
       );
 
