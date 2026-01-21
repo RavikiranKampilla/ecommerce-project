@@ -1,6 +1,8 @@
-import { useState } from "react";
+import { useState, useContext } from "react"; // ✅ ADD useContext
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
+import { BackendStatusContext } from "../context/BackendStatusContext"; // ✅ ADD
+import CavemanLoader from "../components/CavemanLoader"; // ✅ ADD
 import "./Auth.css";
 
 const API_BASE = "https://ecommerce-project-7bi8.onrender.com";
@@ -11,6 +13,14 @@ function Login() {
   const [error, setError] = useState("");
   const navigate = useNavigate();
   const { login: authLogin } = useAuth();
+
+  // ✅ ADD (backend status)
+  const { ready, checking } = useContext(BackendStatusContext);
+
+  // ✅ ADD (SHOW CAVEMAN ONLY WHEN BACKEND SLEEPING)
+  if (checking || !ready) {
+    return <CavemanLoader message="Waking up our servers…" />;
+  }
 
   const login = async () => {
     setError("");
@@ -24,7 +34,6 @@ function Login() {
 
       const text = await res.text(); // ✅ SAFE
 
-      // ✅ HANDLE ERROR RESPONSE CLEANLY
       if (!res.ok) {
         try {
           const errObj = JSON.parse(text);
@@ -35,9 +44,7 @@ function Login() {
         return;
       }
 
-      // ✅ SUCCESS RESPONSE
       const data = JSON.parse(text);
-
       authLogin(data.token);
       navigate("/", { replace: true });
     } catch {

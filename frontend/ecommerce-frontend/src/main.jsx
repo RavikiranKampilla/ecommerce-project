@@ -6,15 +6,18 @@ import "./index.css";
 
 import { CartProvider } from "./context/CartContext";
 import { AuthProvider } from "./context/AuthContext";
+import { BackendStatusProvider } from "./context/BackendStatusContext";
 
 ReactDOM.createRoot(document.getElementById("root")).render(
   <React.StrictMode>
-    <AuthProvider>
-      <CartProvider>
-        <BrowserRouter>
-          <App />
-        </BrowserRouter>
-      </CartProvider>
-    </AuthProvider>
+    <BackendStatusProvider>
+      <AuthProvider>
+        <CartProvider>
+          <BrowserRouter>
+            <App />
+          </BrowserRouter>
+        </CartProvider>
+      </AuthProvider>
+    </BackendStatusProvider>
   </React.StrictMode>
 );
