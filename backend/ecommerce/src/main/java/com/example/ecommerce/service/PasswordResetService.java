@@ -19,11 +19,11 @@ public class PasswordResetService {
     private final PasswordResetTokenRepository tokenRepo;
     private final WebClient webClient;
 
-    // 🔑 Brevo API Key (from Render env)
+    // Brevo API Key (from Render env)
     @Value("${BREVO_API_KEY}")
     private String brevoApiKey;
 
-    // ✅ Sender email (works with Brevo)
+    // Verified sender email
     private static final String FROM_EMAIL = "ravikiran939039@gmail.com";
 
     public PasswordResetService(PasswordResetTokenRepository tokenRepo) {
@@ -51,29 +51,41 @@ public class PasswordResetService {
     }
 
     // =========================
-    // SEND RESET EMAIL (BREVO HTTP API)
+    // SEND RESET EMAIL (BREVO)
     // =========================
     public void sendResetEmail(String to, String link) {
 
-        String html =
-                "<p>Hello,</p>" +
-                "<p>You requested to reset your password.</p>" +
+        String html = """
+            <p>Hello,</p>
+            <p>You requested to reset your password.</p>
 
-                "<p><b>Click the button below:</b></p>" +
-                "<p><a href=\"" + link + "\" target=\"_blank\">Reset Password</a></p>" +
+            <p>
+              <a href="%s"
+                 target="_blank"
+                 style="
+                   display:inline-block;
+                   background:#000000;
+                   color:#ffffff;
+                   padding:12px 20px;
+                   text-decoration:none;
+                   border-radius:6px;
+                   font-weight:bold;
+                 ">
+                Reset Password
+              </a>
+            </p>
 
-                "<br/>" +
-                "<p><b>If the button does not work, copy and paste this link into your browser:</b></p>" +
-                "<p>" + link + "</p>" +
+            <p>If the button does not work, copy and paste this link:</p>
+            <p>%s</p>
 
-                "<br/>" +
-                "<p>This link will expire in <b>15 minutes</b>.</p>" +
-                "<p>If you did not request this, you can safely ignore this email.</p>";
+            <p>This link will expire in <b>15 minutes</b>.</p>
+            <p>If you did not request this, please ignore this email.</p>
+        """.formatted(link, link);
 
         Map<String, Object> body = Map.of(
                 "sender", Map.of(
                         "email", FROM_EMAIL,
-                        "name", "Ecommerce App"
+                        "name", "E-Commerce App"
                 ),
                 "to", new Object[]{
                         Map.of("email", to)
@@ -88,6 +100,6 @@ public class PasswordResetService {
                 .bodyValue(body)
                 .retrieve()
                 .bodyToMono(String.class)
-                .block(); // send immediately
+                .block();
     }
 }
