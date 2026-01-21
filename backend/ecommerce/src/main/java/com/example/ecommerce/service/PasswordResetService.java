@@ -3,28 +3,35 @@ package com.example.ecommerce.service;
 import com.example.ecommerce.entity.AppUser;
 import com.example.ecommerce.entity.PasswordResetToken;
 import com.example.ecommerce.repository.PasswordResetTokenRepository;
-import org.springframework.mail.SimpleMailMessage;
-import org.springframework.mail.javamail.JavaMailSender;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
 import org.springframework.stereotype.Service;
+import org.springframework.web.reactive.function.client.WebClient;
 
 import java.time.LocalDateTime;
+import java.util.Map;
 import java.util.UUID;
 
 @Service
 public class PasswordResetService {
 
     private final PasswordResetTokenRepository tokenRepo;
-    private final JavaMailSender mailSender;
+    private final WebClient webClient;
 
-    // ✅ HARD-CODED FROM (SAFE WITH BREVO)
+    // 🔑 Brevo API Key (from Render env)
+    @Value("${BREVO_API_KEY}")
+    private String brevoApiKey;
+
+    // ✅ Sender email
     private static final String FROM_EMAIL = "ravikiran939039@gmail.com";
 
-    public PasswordResetService(
-            PasswordResetTokenRepository tokenRepo,
-            JavaMailSender mailSender
-    ) {
+    public PasswordResetService(PasswordResetTokenRepository tokenRepo) {
         this.tokenRepo = tokenRepo;
-        this.mailSender = mailSender;
+        this.webClient = WebClient.builder()
+                .baseUrl("https://api.brevo.com/v3")
+                .defaultHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
+                .build();
     }
 
     // =========================
@@ -44,20 +51,31 @@ public class PasswordResetService {
     }
 
     // =========================
-    // SEND RESET EMAIL
+    // SEND RESET EMAIL (BREVO API)
     // =========================
     public void sendResetEmail(String to, String link) {
 
-        SimpleMailMessage mail = new SimpleMailMessage();
-        mail.setFrom(FROM_EMAIL);   // 🔥 THIS FIXES 500
-        mail.setTo(to);
-        mail.setSubject("Reset your password");
-        mail.setText(
-            "Click the link below to reset your password:\n\n" +
-            link +
-            "\n\nThis link will expire in 15 minutes."
+        Map<String, Object> body = Map.of(
+                "sender", Map.of(
+                        "email", FROM_EMAIL,
+                        "name", "Ecommerce App"
+                ),
+                "to", new Object[]{
+                        Map.of("email", to)
+                },
+                "subject", "Reset your password",
+                "htmlContent",
+                        "<p>Click the link below to reset your password:</p>" +
+                        "<p><a href=\"" + link + "\">Reset Password</a></p>" +
+                        "<p>This link will expire in 15 minutes.</p>"
         );
 
-        mailSender.send(mail);
+        webClient.post()
+                .uri("/smtp/email")
+                .header("api-key", brevoApiKey)
+                .bodyValue(body)
+                .retrieve()
+                .bodyToMono(String.class)
+                .block(); // send immediately
     }
 }
