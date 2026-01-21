@@ -44,7 +44,7 @@ public class SecurityConfig {
             .formLogin(form -> form.disable())
             .httpBasic(basic -> basic.disable())
 
-            // ✅ Proper 401
+            // ✅ Proper 401 response
             .exceptionHandling(ex -> ex.authenticationEntryPoint(
                 (req, res, exx) ->
                     res.sendError(HttpServletResponse.SC_UNAUTHORIZED)
@@ -52,11 +52,12 @@ public class SecurityConfig {
 
             .authorizeHttpRequests(auth -> auth
 
-                // 🔥 CRITICAL FIX (CORS PREFLIGHT)
+                // 🔥 MUST: allow CORS preflight
                 .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
 
-                // PUBLIC
+                // 🔥 MUST: allow root (wake Render)
                 .requestMatchers(
+                    "/",
                     "/auth/**",
                     "/products/**",
                     "/categories/**",

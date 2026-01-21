@@ -16,13 +16,6 @@ import java.util.Map;
 
 @RestController
 @RequestMapping("/auth")
-@CrossOrigin(
-    origins = {
-        "http://localhost:5173",
-        "https://ecommerce-project-five-delta.vercel.app",
-        "https://ecommerce-project-7bi8.onrender.com"
-    }
-)
 public class AuthController {
 
     private final AppUserRepository repo;
@@ -46,9 +39,8 @@ public class AuthController {
                     .body(Map.of("error", "Email already exists"));
         }
 
-        // ✅ REQUIRED FIELDS
         user.setPassword(passwordEncoder.encode(user.getPassword()));
-        user.setRole("USER"); // 🔴 MUST BE "USER" (NOT ROLE_USER)
+        user.setRole("USER");
         user.setCreatedAt(LocalDateTime.now());
 
         repo.save(user);
