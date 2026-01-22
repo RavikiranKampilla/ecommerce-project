@@ -24,8 +24,8 @@ export function AuthProvider({ children }) {
   };
 
   return (
-    <AuthContext.Provider value={{ isAuthenticated, login, logout }}>
-      {!loading && children}
+    <AuthContext.Provider value={{ isAuthenticated, login, logout, loading }}>
+      {children}
     </AuthContext.Provider>
   );
 }

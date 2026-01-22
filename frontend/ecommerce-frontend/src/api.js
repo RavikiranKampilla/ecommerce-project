@@ -43,7 +43,7 @@ api.interceptors.request.use((config) => {
   return config;
 });
 
-// ✅ Response interceptor - Cache and enforce minimum delay
+// ✅ Response interceptor - Cache GET responses only (NO delay for mutations)
 api.interceptors.response.use(
   async (res) => {
     // Cache GET responses
@@ -54,16 +54,6 @@ api.interceptors.response.use(
         headers: res.headers,
         timestamp: Date.now(),
       });
-    }
-
-    // Enforce minimum delay for all GET requests to show loading states
-    if (res.config.method === 'get' && res.config.metadata?.startTime) {
-      const elapsed = Date.now() - res.config.metadata.startTime;
-      const remaining = MIN_LOADING_DELAY - elapsed;
-      
-      if (remaining > 0) {
-        await new Promise(resolve => setTimeout(resolve, remaining));
-      }
     }
 
     return res;
