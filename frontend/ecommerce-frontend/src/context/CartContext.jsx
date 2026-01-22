@@ -147,15 +147,8 @@ export function CartProvider({ children }) {
   };
 
   // 🧹 CLEAR CART (LOGOUT / ORDER)
-  const clearCart = async () => {
-    const backup = cart;
+  const clearCart = () => {
     setCart([]);
-
-    try {
-      await api.delete("/cart/clear");
-    } catch {
-      setCart(backup);
-    }
   };
 
   return (

@@ -3,11 +3,13 @@ import Navbar from "../components/Navbar";
 import { useCart } from "../context/CartContext";
 import { toast } from "react-toastify";
 import api from "../api";
+import { useState } from "react";
 
 export default function Checkout() {
   const { state } = useLocation();
   const navigate = useNavigate();
-  const { clearCart, loadCart } = useCart();
+  const { clearCart } = useCart();
+  const [placing, setPlacing] = useState(false);
 
   // Case 1: Buy Now (single product)
   const singleProduct = state?.product;
@@ -17,7 +19,11 @@ export default function Checkout() {
 
   const items = singleProduct ? [singleProduct] : cartItems;
 
-  const total = items.reduce((sum, item) => sum + item.price, 0);
+  // ✅ Fix: multiply price by quantity
+  const total = items.reduce(
+    (sum, item) => sum + item.price * (item.quantity || 1),
+    0
+  );
 
   if (items.length === 0) {
     return (
@@ -31,19 +37,20 @@ export default function Checkout() {
   }
 
   const placeOrder = async () => {
-    try {
-      // 🔥 REAL BACKEND CALL (DB WILL CHANGE)
-      await api.post("/orders");
+    if (placing) return;
+    setPlacing(true);
 
+    try {
+      await api.post("/orders");
       toast.success("Order placed successfully 🎉");
 
-      // Clear cart and reload to sync with backend
-      await clearCart();
-      await loadCart();
-
+      // Cart is already cleared by backend
+      clearCart();
       navigate("/order-success");
     } catch (err) {
-      toast.error("Order failed. Please try again.");
+      toast.error(err.response?.data || "Order failed. Please try again.");
+    } finally {
+      setPlacing(false);
     }
   };
 
@@ -55,8 +62,8 @@ export default function Checkout() {
         <h2 className="section-title">Checkout</h2>
 
         <div className="grid">
-          {items.map((item) => (
-            <div key={item.id} className="card">
+          {items.map((item, index) => (
+            <div key={item.id || index} className="card">
               <img
                 src={item.imageUrl}
                 alt={item.name}
@@ -66,15 +73,20 @@ export default function Checkout() {
               />
               <h3>{item.name}</h3>
               <p>₹{item.price}</p>
+              {item.quantity && <p>Quantity: {item.quantity}</p>}
             </div>
           ))}
         </div>
 
         <div style={{ marginTop: "30px" }}>
-          <h3>Total Amount: ₹{total}</h3>
+          <h3>Total Amount: ₹{total.toFixed(2)}</h3>
 
-          <button className="buy-btn" onClick={placeOrder}>
-            Pay ₹{total}
+          <button
+            className="buy-btn"
+            onClick={placeOrder}
+            disabled={placing}
+          >
+            {placing ? "Placing Order..." : `Pay ₹${total.toFixed(2)}`}
           </button>
 
           <button

@@ -1,8 +1,10 @@
 package com.example.ecommerce.controller;
 
+import com.example.ecommerce.entity.CartItem;
 import com.example.ecommerce.entity.Order;
 import com.example.ecommerce.entity.OrderItem;
 import com.example.ecommerce.entity.Product;
+import com.example.ecommerce.repository.CartRepository;
 import com.example.ecommerce.repository.OrderItemRepository;
 import com.example.ecommerce.repository.OrderRepository;
 import com.example.ecommerce.repository.ProductRepository;
@@ -25,15 +27,92 @@ public class OrderController {
     private final OrderRepository orderRepo;
     private final OrderItemRepository orderItemRepo;
     private final ProductRepository productRepo;
+    private final CartRepository cartRepo;
 
     public OrderController(
             OrderRepository orderRepo,
             OrderItemRepository orderItemRepo,
-            ProductRepository productRepo
+            ProductRepository productRepo,
+            CartRepository cartRepo
     ) {
         this.orderRepo = orderRepo;
         this.orderItemRepo = orderItemRepo;
         this.productRepo = productRepo;
+        this.cartRepo = cartRepo;
+    }
+
+    // ✅ PLACE ORDER FROM CART
+    @PostMapping
+    @Transactional
+    public Order placeOrder() {
+        Authentication auth = SecurityContextHolder
+                .getContext()
+                .getAuthentication();
+
+        if (auth == null || auth instanceof AnonymousAuthenticationToken) {
+            throw new ResponseStatusException(
+                    HttpStatus.UNAUTHORIZED,
+                    "Please login"
+            );
+        }
+
+        String email = auth.getName();
+
+        // Get user's cart
+        List<CartItem> cartItems = cartRepo.findByUserEmail(email);
+
+        if (cartItems.isEmpty()) {
+            throw new ResponseStatusException(
+                    HttpStatus.BAD_REQUEST,
+                    "Cart is empty"
+            );
+        }
+
+        // Calculate total and validate stock
+        double total = 0;
+        for (CartItem item : cartItems) {
+            Product product = productRepo.findById(item.getProductId())
+                    .orElseThrow(() -> new ResponseStatusException(
+                            HttpStatus.NOT_FOUND,
+                            "Product not found"
+                    ));
+
+            if (product.getStock() < item.getQuantity()) {
+                throw new ResponseStatusException(
+                        HttpStatus.BAD_REQUEST,
+                        "Insufficient stock for " + product.getName()
+                );
+            }
+
+            total += product.getPrice() * item.getQuantity();
+        }
+
+        // Create order
+        Order order = new Order();
+        order.setUserEmail(email);
+        order.setTotalAmount(total);
+        Order savedOrder = orderRepo.save(order);
+
+        // Create order items and reduce stock
+        for (CartItem item : cartItems) {
+            Product product = productRepo.findById(item.getProductId()).orElseThrow();
+
+            OrderItem orderItem = new OrderItem();
+            orderItem.setOrderId(savedOrder.getId());
+            orderItem.setProductId(product.getId());
+            orderItem.setQuantity(item.getQuantity());
+            orderItem.setPrice(product.getPrice());
+            orderItemRepo.save(orderItem);
+
+            // Reduce stock
+            product.setStock(product.getStock() - item.getQuantity());
+            productRepo.save(product);
+        }
+
+        // Clear cart
+        cartRepo.deleteAll(cartItems);
+
+        return savedOrder;
     }
 
     // ✅ CANCEL ORDER (USER SIDE) – FINAL
