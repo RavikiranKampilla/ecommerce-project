@@ -13,8 +13,7 @@ export default function Cart() {
   const navigate = useNavigate();
 
   const increase = (item) => {
-    const product = item.product || item;
-    if (item.quantity < product.stock) {
+    if (item.quantity < item.stock) {
       updateQuantity(item.id, item.quantity + 1);
     }
   };
@@ -26,8 +25,7 @@ export default function Cart() {
   };
 
   const total = cart.reduce((sum, item) => {
-    const product = item.product || item;
-    return sum + (product.price || 0) * (item.quantity || 0);
+    return sum + (item.price || 0) * (item.quantity || 0);
   }, 0);
 
   return (
@@ -50,17 +48,15 @@ export default function Cart() {
           <>
             <div className="grid">
               {cart.map((item) => {
-                const product = item.product || item;
-
                 return (
                   <div key={item.id} className="card">
                     <img
-                      src={product.imageUrl}
-                      alt={product.name}
+                      src={item.imageUrl}
+                      alt={item.name}
                     />
 
-                    <h3>{product.name}</h3>
-                    <p>₹{product.price}</p>
+                    <h3>{item.name}</h3>
+                    <p>₹{item.price}</p>
 
                     <div style={{ display: "flex", gap: 10 }}>
                       <button onClick={() => decrease(item)}>
@@ -71,7 +67,7 @@ export default function Cart() {
 
                       <button
                         onClick={() => increase(item)}
-                        disabled={item.quantity >= product.stock}
+                        disabled={item.quantity >= item.stock}
                       >
                         +
                       </button>

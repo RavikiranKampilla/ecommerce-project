@@ -27,35 +27,12 @@ export function CartProvider({ children }) {
 
       try {
         const res = await api.get("/cart");
-
-        const hydratedCart = await Promise.all(
-          (res.data || []).map(async (item) => {
-            const productId = item.productId ?? item.product?.id;
-
-            let product = item.product ?? null;
-
-            // 🔒 NEVER drop cart rows
-            if (productId) {
-              try {
-                const productRes = await api.get(`/products/${productId}`);
-                product = productRes.data;
-              } catch {
-                // product fetch failed → KEEP cart item
-              }
-            }
-
-            return {
-              id: item.id,
-              quantity: item.quantity,
-              product,
-            };
-          })
-        );
-
-        setCart(hydratedCart);
+        setCart(res.data || []);
       } catch (err) {
-        console.error("Failed to load cart:", err);
-        // ❗ DO NOT clear cart on error
+        if (err.response?.status !== 401) {
+          console.error("Failed to load cart:", err);
+        }
+        setCart([]);
       } finally {
         setCartLoading(false);
       }
@@ -70,7 +47,7 @@ export function CartProvider({ children }) {
     if (!token) throw new Error("LOGIN_REQUIRED");
 
     const existing = cart.find(
-      (item) => item.product?.id === product.id
+      (item) => item.productId === product.id
     );
 
     const tempId = Date.now();
@@ -79,7 +56,7 @@ export function CartProvider({ children }) {
     if (existing) {
       setCart((prev) =>
         prev.map((item) =>
-          item.product?.id === product.id
+          item.productId === product.id
             ? { ...item, quantity: item.quantity + quantity }
             : item
         )
@@ -89,8 +66,12 @@ export function CartProvider({ children }) {
         ...prev,
         {
           id: tempId,
+          productId: product.id,
+          name: product.name,
+          price: product.price,
+          imageUrl: product.imageUrl,
           quantity,
-          product,
+          stock: product.stock,
         },
       ]);
     }
@@ -104,12 +85,8 @@ export function CartProvider({ children }) {
       // Replace temp row with backend row
       setCart((prev) =>
         prev.map((item) =>
-          item.id === tempId || item.product?.id === product.id
-            ? {
-                id: res.data.id,
-                quantity: res.data.quantity,
-                product,
-              }
+          item.id === tempId || item.productId === product.id
+            ? res.data
             : item
         )
       );
@@ -118,7 +95,7 @@ export function CartProvider({ children }) {
       if (existing) {
         setCart((prev) =>
           prev.map((item) =>
-            item.product?.id === product.id
+            item.productId === product.id
               ? { ...item, quantity: item.quantity - quantity }
               : item
           )
