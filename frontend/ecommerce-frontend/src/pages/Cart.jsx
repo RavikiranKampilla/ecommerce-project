@@ -3,7 +3,7 @@ import Navbar from "../components/Navbar";
 import { useCart } from "../context/CartContext";
 
 export default function Cart() {
-  const { cart, updateQuantity, removeFromCart } = useCart();
+  const { cart, cartLoading, updateQuantity, removeFromCart } = useCart();
   const navigate = useNavigate();
 
   // Helper functions using CartContext
@@ -36,7 +36,11 @@ export default function Cart() {
       <div className="container">
         <h2 className="section-title">Your Cart</h2>
 
-        {cart.length === 0 ? (
+        {cartLoading ? (
+          <div className="empty-state fade-in">
+            <h3>Loading cart...</h3>
+          </div>
+        ) : cart.length === 0 ? (
           <div className="empty-state fade-in">
             <h3>Your cart is empty 🛒</h3>
             <p>Add items to your cart to see them here.</p>

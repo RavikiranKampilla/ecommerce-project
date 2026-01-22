@@ -1,28 +1,40 @@
 import { createContext, useContext, useEffect, useState } from "react";
 import api from "../api";
-import { isAuthenticated } from "../utils/auth";
+import { useAuth } from "./AuthContext";
 
 const CartContext = createContext();
 
 export function CartProvider({ children }) {
+  const { isAuthenticated } = useAuth();
   const [cart, setCart] = useState([]);
+  const [cartLoading, setCartLoading] = useState(true);
 
-  // Load cart on mount
+  // Load cart whenever auth state changes
   useEffect(() => {
-    if (!isAuthenticated()) {
-      setCart([]);
-      return;
-    }
+    const loadCart = async () => {
+      if (!isAuthenticated) {
+        setCart([]);
+        setCartLoading(false);
+        return;
+      }
 
-    api
-      .get("/cart")
-      .then((res) => setCart(res.data))
-      .catch(() => setCart([]));
-  }, []);
+      setCartLoading(true);
+      try {
+        const res = await api.get("/cart");
+        setCart(res.data);
+      } catch {
+        setCart([]);
+      } finally {
+        setCartLoading(false);
+      }
+    };
+
+    loadCart();
+  }, [isAuthenticated]);
 
   // ✅ ADD TO CART (OPTIMISTIC + API SYNC)
   const addToCart = async (product, quantity = 1) => {
-    if (!isAuthenticated()) {
+    if (!isAuthenticated) {
       throw new Error("LOGIN_REQUIRED");
     }
 
@@ -154,6 +166,7 @@ export function CartProvider({ children }) {
     <CartContext.Provider
       value={{
         cart,
+        cartLoading,
         addToCart,
         updateQuantity,
         removeFromCart,
