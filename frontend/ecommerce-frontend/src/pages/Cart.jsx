@@ -13,7 +13,8 @@ export default function Cart() {
   const navigate = useNavigate();
 
   const increase = (item) => {
-    if (item.quantity < item.stock) {
+    const product = item.product || item;
+    if (item.quantity < product.stock) {
       updateQuantity(item.id, item.quantity + 1);
     }
   };
@@ -24,10 +25,10 @@ export default function Cart() {
     }
   };
 
-  const total = cart.reduce(
-    (sum, item) => sum + (item.price || 0) * (item.quantity || 0),
-    0
-  );
+  const total = cart.reduce((sum, item) => {
+    const product = item.product || item;
+    return sum + (product.price || 0) * (item.quantity || 0);
+  }, 0);
 
   return (
     <>
@@ -48,36 +49,43 @@ export default function Cart() {
         ) : (
           <>
             <div className="grid">
-              {cart.map((item) => (
-                <div key={item.id} className="card">
-                  <img src={item.imageUrl} alt={item.name} />
+              {cart.map((item) => {
+                const product = item.product || item;
 
-                  <h3>{item.name}</h3>
-                  <p>₹{item.price}</p>
+                return (
+                  <div key={item.id} className="card">
+                    <img
+                      src={product.imageUrl}
+                      alt={product.name}
+                    />
 
-                  <div style={{ display: "flex", gap: 10 }}>
-                    <button onClick={() => decrease(item)}>
-                      −
-                    </button>
+                    <h3>{product.name}</h3>
+                    <p>₹{product.price}</p>
 
-                    <strong>{item.quantity}</strong>
+                    <div style={{ display: "flex", gap: 10 }}>
+                      <button onClick={() => decrease(item)}>
+                        −
+                      </button>
+
+                      <strong>{item.quantity}</strong>
+
+                      <button
+                        onClick={() => increase(item)}
+                        disabled={item.quantity >= product.stock}
+                      >
+                        +
+                      </button>
+                    </div>
 
                     <button
-                      onClick={() => increase(item)}
-                      disabled={item.quantity >= item.stock}
+                      style={{ background: "#ef4444", marginTop: 10 }}
+                      onClick={() => removeFromCart(item.id)}
                     >
-                      +
+                      Remove
                     </button>
                   </div>
-
-                  <button
-                    style={{ background: "#ef4444", marginTop: 10 }}
-                    onClick={() => removeFromCart(item.id)}
-                  >
-                    Remove
-                  </button>
-                </div>
-              ))}
+                );
+              })}
             </div>
 
             <h3>Total: ₹{total}</h3>
