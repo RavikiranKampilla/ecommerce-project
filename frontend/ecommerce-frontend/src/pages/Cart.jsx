@@ -1,93 +1,26 @@
-import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import Navbar from "../components/Navbar";
-import api from "../api";
+import { useCart } from "../context/CartContext";
 
 export default function Cart() {
-  const [cart, setCart] = useState([]);
+  const { cart, updateQuantity, removeFromCart } = useCart();
   const navigate = useNavigate();
 
-  // Load cart once
-  const loadCart = async () => {
-    try {
-      const res = await api.get("/cart");
-      setCart(res.data);
-    } catch {
-      setCart([]);
+  // Helper functions using CartContext
+  const increase = (item) => {
+    if (item.quantity < item.stock) {
+      updateQuantity(item.id, item.quantity + 1);
     }
   };
 
-  useEffect(() => {
-    loadCart();
-  }, []);
-
-  // ✅ INCREASE (OPTIMISTIC)
-  const increase = async (item) => {
-    if (item.quantity >= item.stock) return;
-
-    // instant UI update
-    setCart((prev) =>
-      prev.map((i) =>
-        i.id === item.id
-          ? { ...i, quantity: i.quantity + 1 }
-          : i
-      )
-    );
-
-    try {
-      await api.put(`/cart/increase/${item.id}`);
-    } catch {
-      // rollback if API fails
-      setCart((prev) =>
-        prev.map((i) =>
-          i.id === item.id
-            ? { ...i, quantity: i.quantity - 1 }
-            : i
-        )
-      );
+  const decrease = (item) => {
+    if (item.quantity > 1) {
+      updateQuantity(item.id, item.quantity - 1);
     }
   };
 
-  // ✅ DECREASE (OPTIMISTIC)
-  const decrease = async (id) => {
-    const current = cart.find((i) => i.id === id);
-    if (!current || current.quantity <= 1) return;
-
-    // instant UI update
-    setCart((prev) =>
-      prev.map((i) =>
-        i.id === id
-          ? { ...i, quantity: i.quantity - 1 }
-          : i
-      )
-    );
-
-    try {
-      await api.put(`/cart/decrease/${id}`);
-    } catch {
-      // rollback
-      setCart((prev) =>
-        prev.map((i) =>
-          i.id === id
-            ? { ...i, quantity: i.quantity + 1 }
-            : i
-        )
-      );
-    }
-  };
-
-  // ✅ REMOVE (OPTIMISTIC)
-  const remove = async (id) => {
-    const backup = cart;
-
-    // instant UI update
-    setCart((prev) => prev.filter((i) => i.id !== id));
-
-    try {
-      await api.delete(`/cart/${id}`);
-    } catch {
-      setCart(backup);
-    }
+  const remove = (itemId) => {
+    removeFromCart(itemId);
   };
 
   // Total
@@ -139,7 +72,7 @@ export default function Cart() {
                       alignItems: "center",
                     }}
                   >
-                    <button onClick={() => decrease(item.id)}>
+                    <button onClick={() => decrease(item)}>
                       −
                     </button>
 

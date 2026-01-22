@@ -70,16 +70,44 @@ export function CartProvider({ children }) {
     }
   };
 
-  // ✅ REMOVE FROM CART
-  const removeFromCart = async (productId) => {
-    const backup = cart;
+  // ✅ UPDATE QUANTITY (INCREASE/DECREASE)
+  const updateQuantity = async (itemId, newQuantity) => {
+    const item = cart.find((i) => i.id === itemId);
+    if (!item) return;
 
+    // Validate quantity
+    if (newQuantity < 1 || newQuantity > item.stock) return;
+
+    const oldQuantity = item.quantity;
+
+    // Optimistic update
     setCart((prev) =>
-      prev.filter((item) => item.productId !== productId)
+      prev.map((i) =>
+        i.id === itemId ? { ...i, quantity: newQuantity } : i
+      )
     );
 
     try {
-      await api.delete(`/cart/remove/${productId}`);
+      const endpoint = newQuantity > oldQuantity ? 'increase' : 'decrease';
+      await api.put(`/cart/${endpoint}/${itemId}`);
+    } catch {
+      // Rollback on failure
+      setCart((prev) =>
+        prev.map((i) =>
+          i.id === itemId ? { ...i, quantity: oldQuantity } : i
+        )
+      );
+    }
+  };
+
+  // ✅ REMOVE FROM CART
+  const removeFromCart = async (itemId) => {
+    const backup = cart;
+
+    setCart((prev) => prev.filter((item) => item.id !== itemId));
+
+    try {
+      await api.delete(`/cart/${itemId}`);
     } catch {
       setCart(backup);
     }
@@ -102,6 +130,7 @@ export function CartProvider({ children }) {
       value={{
         cart,
         addToCart,
+        updateQuantity,
         removeFromCart,
         clearCart,
       }}
