@@ -7,24 +7,17 @@ const CartContext = createContext();
 export function CartProvider({ children }) {
   const [cart, setCart] = useState([]);
 
-  // Load cart function
-  const loadCart = async () => {
+  // Load cart on mount
+  useEffect(() => {
     if (!isAuthenticated()) {
       setCart([]);
       return;
     }
 
-    try {
-      const res = await api.get("/cart");
-      setCart(res.data);
-    } catch {
-      setCart([]);
-    }
-  };
-
-  // Load cart on mount
-  useEffect(() => {
-    loadCart();
+    api
+      .get("/cart")
+      .then((res) => setCart(res.data))
+      .catch(() => setCart([]));
   }, []);
 
   // ✅ ADD TO CART (OPTIMISTIC)
@@ -111,7 +104,6 @@ export function CartProvider({ children }) {
         addToCart,
         removeFromCart,
         clearCart,
-        loadCart,
       }}
     >
       {children}
