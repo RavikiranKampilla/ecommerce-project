@@ -9,12 +9,15 @@ const api = axios.create({
   baseURL: "https://ecommerce-project-7bi8.onrender.com",
 });
 
-// ✅ Request interceptor - Check cache before making request
+// ✅ Request interceptor - Add token and track request start time
 api.interceptors.request.use((config) => {
   const token = localStorage.getItem("token");
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
   }
+
+  // Track when request started for minimum delay
+  config.metadata = { startTime: Date.now() };
 
   // Check cache for GET requests
   if (config.method === 'get') {
@@ -40,9 +43,9 @@ api.interceptors.request.use((config) => {
   return config;
 });
 
-// ✅ Response interceptor - Cache successful GET responses
+// ✅ Response interceptor - Cache and enforce minimum delay
 api.interceptors.response.use(
-  (res) => {
+  async (res) => {
     // Cache GET responses
     if (res.config.method === 'get' && res.status === 200) {
       const cacheKey = res.config.url;
@@ -52,6 +55,17 @@ api.interceptors.response.use(
         timestamp: Date.now(),
       });
     }
+
+    // Enforce minimum delay for all GET requests to show loading states
+    if (res.config.method === 'get' && res.config.metadata?.startTime) {
+      const elapsed = Date.now() - res.config.metadata.startTime;
+      const remaining = MIN_LOADING_DELAY - elapsed;
+      
+      if (remaining > 0) {
+        await new Promise(resolve => setTimeout(resolve, remaining));
+      }
+    }
+
     return res;
   },
   (err) => {
