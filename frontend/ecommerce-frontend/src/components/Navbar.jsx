@@ -13,7 +13,7 @@ function parseJwt(token) {
 
 export default function Navbar() {
   const navigate = useNavigate();
-  const { cart, clearCart } = useCart();
+  const { clearCart } = useCart();
   const { logout } = useAuth();
 
   const token = localStorage.getItem("token");
@@ -24,11 +24,10 @@ export default function Navbar() {
   }, [token]);
 
   const isAdmin = payload?.role === "ADMIN";
-  const cartCount = cart.reduce((sum, item) => sum + item.quantity, 0);
 
   const handleLogout = () => {
-    clearCart(); // Clear cart state
-    logout(); // Clear auth state
+    clearCart();
+    logout();
     navigate("/login", { replace: true });
   };
 
@@ -41,18 +40,19 @@ export default function Navbar() {
         borderBottom: "1px solid #e5e7eb",
       }}
     >
-      <h2>E-Commerce</h2>
+      {/* Clickable Brand → Home */}
+      <h2
+        style={{ cursor: "pointer" }}
+        onClick={() => navigate("/")}
+      >
+        E-Commerce
+      </h2>
 
       <div style={{ display: "flex", gap: "20px", alignItems: "center" }}>
         <Link to="/">Home</Link>
 
-        {token && !isAdmin && (
-          <Link to="/cart">
-            Cart {cartCount > 0 && `(${cartCount})`}
-          </Link>
-        )}
+        {token && !isAdmin && <Link to="/cart">Cart</Link>}
         {token && !isAdmin && <Link to="/orders">Orders</Link>}
-
         {token && isAdmin && <Link to="/admin/orders">Admin Orders</Link>}
 
         {!token ? (
