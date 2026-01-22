@@ -82,11 +82,15 @@ export function CartProvider({ children }) {
         quantity,
       });
 
-      // Replace temp row with backend response (flat structure)
+      // Replace temp ID with backend ID, but KEEP product details
       setCart((prev) =>
         prev.map((item) =>
           item.id === tempId || item.productId === product.id
-            ? res.data
+            ? {
+                ...item,
+                id: res.data.id,
+                quantity: res.data.quantity,
+              }
             : item
         )
       );
