@@ -30,7 +30,7 @@ public class CartController {
 
     // ✅ ADD TO CART
     @PostMapping
-    public Map<String, Object> addToCart(@RequestBody CartItem item) {
+    public CartItem addToCart(@RequestBody CartItem item) {
 
         Authentication auth = SecurityContextHolder
                 .getContext()
@@ -54,7 +54,7 @@ public class CartController {
                         )
                 );
 
-        CartItem savedItem = cartRepo
+        return cartRepo
                 .findByUserEmailAndProductId(email, item.getProductId())
                 .map(existing -> {
                     int newQty = existing.getQuantity() + item.getQuantity();
@@ -80,17 +80,6 @@ public class CartController {
                     item.setUserEmail(email);
                     return cartRepo.save(item);
                 });
-
-        // ✅ Return enriched data with product details
-        Map<String, Object> response = new HashMap<>();
-        response.put("id", savedItem.getId());
-        response.put("productId", product.getId());
-        response.put("name", product.getName());
-        response.put("price", product.getPrice());
-        response.put("imageUrl", product.getImageUrl());
-        response.put("quantity", savedItem.getQuantity());
-        response.put("stock", product.getStock());
-        return response;
     }
 
     // ✅ GET CART
@@ -121,7 +110,6 @@ public class CartController {
             map.put("price", p.getPrice());
             map.put("imageUrl", p.getImageUrl());
             map.put("quantity", item.getQuantity());
-            map.put("stock", p.getStock());
             return map;
         }).toList();
     }
