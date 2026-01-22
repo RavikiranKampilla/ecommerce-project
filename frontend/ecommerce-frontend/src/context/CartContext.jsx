@@ -20,33 +20,31 @@ export function CartProvider({ children }) {
       .catch(() => setCart([]));
   }, []);
 
-  // ✅ ADD TO CART (OPTIMISTIC)
+  // ✅ ADD TO CART (OPTIMISTIC + API SYNC)
   const addToCart = async (product, quantity = 1) => {
     if (!isAuthenticated()) {
       throw new Error("LOGIN_REQUIRED");
     }
 
-    // 🔥 instant UI update
-    setCart((prev) => {
-      const existing = prev.find(
-        (item) => item.productId === product.id
-      );
+    // 🔥 instant UI update (optimistic)
+    const tempId = Date.now();
+    const existing = cart.find((item) => item.productId === product.id);
 
-      if (existing) {
-        return prev.map((item) =>
+    if (existing) {
+      // Optimistically increase quantity
+      setCart((prev) =>
+        prev.map((item) =>
           item.productId === product.id
-            ? {
-                ...item,
-                quantity: item.quantity + quantity,
-              }
+            ? { ...item, quantity: item.quantity + quantity }
             : item
-        );
-      }
-
-      return [
+        )
+      );
+    } else {
+      // Optimistically add new item
+      setCart((prev) => [
         ...prev,
         {
-          id: Date.now(), // temp id
+          id: tempId,
           productId: product.id,
           name: product.name,
           price: product.price,
@@ -54,19 +52,46 @@ export function CartProvider({ children }) {
           quantity,
           stock: product.stock,
         },
-      ];
-    });
+      ]);
+    }
 
     try {
-      await api.post("/cart/add", {
+      // Call API and get actual cart item from backend
+      const res = await api.post("/cart/add", {
         productId: product.id,
         quantity,
       });
-    } catch {
-      // rollback if API fails
-      setCart((prev) =>
-        prev.filter((item) => item.productId !== product.id)
-      );
+
+      // Update cart with actual backend response (real ID and data)
+      setCart((prev) => {
+        if (existing) {
+          // Update existing item with backend data
+          return prev.map((item) =>
+            item.productId === product.id
+              ? { ...item, ...res.data, id: res.data.id }
+              : item
+          );
+        } else {
+          // Replace temp item with real backend data
+          return prev.map((item) =>
+            item.id === tempId ? { ...res.data } : item
+          );
+        }
+      });
+    } catch (err) {
+      // Rollback on failure
+      if (existing) {
+        setCart((prev) =>
+          prev.map((item) =>
+            item.productId === product.id
+              ? { ...item, quantity: item.quantity - quantity }
+              : item
+          )
+        );
+      } else {
+        setCart((prev) => prev.filter((item) => item.id !== tempId));
+      }
+      throw err;
     }
   };
 
