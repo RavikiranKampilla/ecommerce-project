@@ -3,6 +3,7 @@ import axios from "axios";
 // ✅ In-memory cache for GET requests
 const cache = new Map();
 const CACHE_DURATION = 60000; // 1 minute
+const MIN_LOADING_DELAY = 500; // Minimum 500ms delay for loading states
 
 const api = axios.create({
   baseURL: "https://ecommerce-project-7bi8.onrender.com",
@@ -21,13 +22,17 @@ api.interceptors.request.use((config) => {
     const cached = cache.get(cacheKey);
     
     if (cached && Date.now() - cached.timestamp < CACHE_DURATION) {
-      // Return cached response without making network request
-      config.adapter = () => Promise.resolve({
-        data: cached.data,
-        status: 200,
-        statusText: 'OK (cached)',
-        headers: cached.headers,
-        config: config,
+      // Return cached response with minimum delay to show loading states
+      config.adapter = () => new Promise((resolve) => {
+        setTimeout(() => {
+          resolve({
+            data: cached.data,
+            status: 200,
+            statusText: 'OK (cached)',
+            headers: cached.headers,
+            config: config,
+          });
+        }, MIN_LOADING_DELAY);
       });
     }
   }
