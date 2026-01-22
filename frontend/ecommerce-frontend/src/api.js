@@ -9,47 +9,55 @@ const api = axios.create({
   baseURL: "https://ecommerce-project-7bi8.onrender.com",
 });
 
-// ✅ Request interceptor - Add token and track request start time
+// ❌ DO NOT cache user-specific endpoints
+const NO_CACHE_ENDPOINTS = ["/cart", "/orders"];
+
+// Helper
+const shouldCache = (url) =>
+  !NO_CACHE_ENDPOINTS.some((path) => url.startsWith(path));
+
+// ✅ Request interceptor
 api.interceptors.request.use((config) => {
   const token = localStorage.getItem("token");
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
   }
 
-  // Track when request started for minimum delay
   config.metadata = { startTime: Date.now() };
 
-  // Check cache for GET requests
-  if (config.method === 'get') {
+  // ✅ Cache ONLY non-user GET requests
+  if (config.method === "get" && shouldCache(config.url)) {
     const cacheKey = config.url;
     const cached = cache.get(cacheKey);
-    
+
     if (cached && Date.now() - cached.timestamp < CACHE_DURATION) {
-      // Return cached response with minimum delay to show loading states
-      config.adapter = () => new Promise((resolve) => {
-        setTimeout(() => {
-          resolve({
-            data: cached.data,
-            status: 200,
-            statusText: 'OK (cached)',
-            headers: cached.headers,
-            config: config,
-          });
-        }, MIN_LOADING_DELAY);
-      });
+      config.adapter = () =>
+        new Promise((resolve) => {
+          setTimeout(() => {
+            resolve({
+              data: cached.data,
+              status: 200,
+              statusText: "OK (cached)",
+              headers: cached.headers,
+              config,
+            });
+          }, MIN_LOADING_DELAY);
+        });
     }
   }
 
   return config;
 });
 
-// ✅ Response interceptor - Cache GET responses only (NO delay for mutations)
+// ✅ Response interceptor
 api.interceptors.response.use(
-  async (res) => {
-    // Cache GET responses
-    if (res.config.method === 'get' && res.status === 200) {
-      const cacheKey = res.config.url;
-      cache.set(cacheKey, {
+  (res) => {
+    if (
+      res.config.method === "get" &&
+      res.status === 200 &&
+      shouldCache(res.config.url)
+    ) {
+      cache.set(res.config.url, {
         data: res.data,
         headers: res.headers,
         timestamp: Date.now(),
@@ -61,26 +69,23 @@ api.interceptors.response.use(
   (err) => {
     if (err.response?.status === 401) {
       localStorage.removeItem("token");
+      cache.clear(); // 🔥 clear cache on auth failure
     }
     return Promise.reject(err);
   }
 );
 
-// ✅ Clear cache when user logs out
+// ✅ Clear cache manually (use after cart mutations if needed)
 export const clearCache = () => cache.clear();
 
-// ✅ Keep backend alive - Ping every 10 minutes to prevent cold starts
-if (typeof window !== 'undefined') {
+// ✅ Keep backend alive (cold start prevention)
+if (typeof window !== "undefined") {
   const keepAlive = () => {
-    fetch('https://ecommerce-project-7bi8.onrender.com/health')
-      .catch(() => {}); // Ignore errors
+    fetch("https://ecommerce-project-7bi8.onrender.com/health").catch(() => {});
   };
 
-  // Ping on load
   keepAlive();
-
-  // Ping every 10 minutes
-  setInterval(keepAlive, 600000);
+  setInterval(keepAlive, 600000); // every 10 min
 }
 
 export default api;
