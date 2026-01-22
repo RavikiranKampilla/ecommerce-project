@@ -11,7 +11,7 @@ export function CartProvider({ children }) {
   const [cart, setCart] = useState([]);
   const [cartLoading, setCartLoading] = useState(true);
 
-  // 🔁 Load cart after auth
+  // 🔁 Load cart after auth is ready
   useEffect(() => {
     if (loading) return;
 
@@ -24,31 +24,14 @@ export function CartProvider({ children }) {
       }
 
       setCartLoading(true);
+
       try {
         const res = await api.get("/cart");
-
-        // ✅ HYDRATE product fields so Cart.jsx works
-        const hydrated = await Promise.all(
-          (res.data || []).map(async (item) => {
-            const productRes = await api.get(
-              `/products/${item.productId}`
-            );
-
-            return {
-              id: item.id,
-              productId: item.productId,
-              quantity: item.quantity,
-              name: productRes.data.name,
-              price: productRes.data.price,
-              imageUrl: productRes.data.imageUrl,
-              stock: productRes.data.stock,
-            };
-          })
-        );
-
-        setCart(hydrated);
+        setCart(res.data || []);
       } catch (err) {
-        console.error("Failed to load cart:", err);
+        if (err.response?.status !== 401) {
+          console.error("Failed to load cart:", err);
+        }
         setCart([]);
       } finally {
         setCartLoading(false);
@@ -58,22 +41,22 @@ export function CartProvider({ children }) {
     loadCart();
   }, [loading]);
 
-  // 🛒 ADD TO CART (KEEP PRODUCT FIELDS)
+  // 🛒 ADD TO CART (OPTIMISTIC & SAFE)
   const addToCart = async (product, quantity = 1) => {
     const token = getToken();
     if (!token) throw new Error("LOGIN_REQUIRED");
 
     const existing = cart.find(
-      (item) => item.productId === product.id
+      (item) => item.product?.id === product.id
     );
 
     const tempId = Date.now();
 
-    // ✅ Optimistic insert (FULL SHAPE)
+    // Optimistic UI
     if (existing) {
       setCart((prev) =>
         prev.map((item) =>
-          item.productId === product.id
+          item.product?.id === product.id
             ? { ...item, quantity: item.quantity + quantity }
             : item
         )
@@ -83,33 +66,47 @@ export function CartProvider({ children }) {
         ...prev,
         {
           id: tempId,
-          productId: product.id,
-          name: product.name,
-          price: product.price,
-          imageUrl: product.imageUrl,
           quantity,
-          stock: product.stock,
+          product,
         },
       ]);
     }
 
-    const res = await api.post("/cart", {
-      productId: product.id,
-      quantity,
-    });
+    try {
+      const res = await api.post("/cart", {
+        productId: product.id,
+        quantity,
+      });
 
-    // ✅ DO NOT overwrite product fields
-    setCart((prev) =>
-      prev.map((item) =>
-        item.id === tempId || item.productId === product.id
-          ? {
-              ...item,
-              id: res.data.id,
-              quantity: res.data.quantity,
-            }
-          : item
-      )
-    );
+      // Replace temp row with backend row
+      setCart((prev) =>
+        prev.map((item) =>
+          item.id === tempId || item.product?.id === product.id
+            ? {
+                id: res.data.id,
+                quantity: res.data.quantity,
+                product,
+              }
+            : item
+        )
+      );
+    } catch (err) {
+      // Rollback
+      if (existing) {
+        setCart((prev) =>
+          prev.map((item) =>
+            item.product?.id === product.id
+              ? { ...item, quantity: item.quantity - quantity }
+              : item
+          )
+        );
+      } else {
+        setCart((prev) =>
+          prev.filter((item) => item.id !== tempId)
+        );
+      }
+      throw err;
+    }
   };
 
   // ➕➖ UPDATE QUANTITY
@@ -150,7 +147,10 @@ export function CartProvider({ children }) {
     }
   };
 
-  const clearCart = () => setCart([]);
+  // 🧹 CLEAR CART (logout / checkout)
+  const clearCart = () => {
+    setCart([]);
+  };
 
   return (
     <CartContext.Provider
