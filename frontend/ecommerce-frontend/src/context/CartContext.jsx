@@ -47,16 +47,16 @@ export function CartProvider({ children }) {
     if (!token) throw new Error("LOGIN_REQUIRED");
 
     const existing = cart.find(
-      (item) => item.product?.id === product.id
+      (item) => item.productId === product.id
     );
 
     const tempId = Date.now();
 
-    // Optimistic UI
+    // Optimistic UI - use flat structure matching backend response
     if (existing) {
       setCart((prev) =>
         prev.map((item) =>
-          item.product?.id === product.id
+          item.productId === product.id
             ? { ...item, quantity: item.quantity + quantity }
             : item
         )
@@ -66,8 +66,12 @@ export function CartProvider({ children }) {
         ...prev,
         {
           id: tempId,
+          productId: product.id,
+          name: product.name,
+          price: product.price,
+          imageUrl: product.imageUrl,
+          stock: product.stock,
           quantity,
-          product,
         },
       ]);
     }
@@ -78,15 +82,11 @@ export function CartProvider({ children }) {
         quantity,
       });
 
-      // Replace temp row with backend row
+      // Replace temp row with backend response (flat structure)
       setCart((prev) =>
         prev.map((item) =>
-          item.id === tempId || item.product?.id === product.id
-            ? {
-                id: res.data.id,
-                quantity: res.data.quantity,
-                product,
-              }
+          item.id === tempId || item.productId === product.id
+            ? res.data
             : item
         )
       );
@@ -95,7 +95,7 @@ export function CartProvider({ children }) {
       if (existing) {
         setCart((prev) =>
           prev.map((item) =>
-            item.product?.id === product.id
+            item.productId === product.id
               ? { ...item, quantity: item.quantity - quantity }
               : item
           )
