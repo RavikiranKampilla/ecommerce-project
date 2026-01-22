@@ -25,25 +25,26 @@ export function CartProvider({ children }) {
 
       setCartLoading(true);
       try {
-        // 1️⃣ Get cart items (productId + quantity)
         const res = await api.get("/cart");
 
-        // 2️⃣ Hydrate product details for each cart item
         const hydratedCart = await Promise.all(
           (res.data || []).map(async (item) => {
-            const productRes = await api.get(
-              `/products/${item.productId}`
-            );
+            // ✅ Support BOTH backend shapes safely
+            const productId = item.productId ?? item.product?.id;
+            if (!productId) return null;
+
+            const productRes = await api.get(`/products/${productId}`);
 
             return {
               id: item.id,
               quantity: item.quantity,
-              product: productRes.data, // FULL product
+              product: productRes.data,
             };
           })
         );
 
-        setCart(hydratedCart);
+        // ✅ Remove failed/null entries safely
+        setCart(hydratedCart.filter(Boolean));
       } catch (err) {
         console.error("Failed to load cart:", err);
         setCart([]);
@@ -55,20 +56,20 @@ export function CartProvider({ children }) {
     loadCart();
   }, [isAuthenticated, loading]);
 
-  // 🛒 ADD TO CART (OPTIMISTIC + CONSISTENT SHAPE)
+  // 🛒 ADD TO CART (OPTIMISTIC + SAFE)
   const addToCart = async (product, quantity = 1) => {
     const token = getToken();
     if (!token) {
       throw new Error("LOGIN_REQUIRED");
     }
 
-    const tempId = Date.now();
-
     const existing = cart.find(
       (item) => item.product.id === product.id
     );
 
-    // 🔥 Optimistic update
+    const tempId = Date.now();
+
+    // 🔥 Optimistic UI update
     if (existing) {
       setCart((prev) =>
         prev.map((item) =>
@@ -94,7 +95,7 @@ export function CartProvider({ children }) {
         quantity,
       });
 
-      // Replace temp item with backend item
+      // ✅ Replace optimistic item with backend ID
       setCart((prev) =>
         prev.map((item) =>
           item.id === tempId || item.product.id === product.id
@@ -107,7 +108,7 @@ export function CartProvider({ children }) {
         )
       );
     } catch (err) {
-      // 🔙 Rollback
+      // 🔙 Rollback on failure
       if (existing) {
         setCart((prev) =>
           prev.map((item) =>
