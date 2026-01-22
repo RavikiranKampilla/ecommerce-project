@@ -6,12 +6,12 @@ import { getToken } from "../utils/auth";
 const CartContext = createContext();
 
 export function CartProvider({ children }) {
-  const { isAuthenticated, loading } = useAuth();
+  const { loading } = useAuth();
 
   const [cart, setCart] = useState([]);
   const [cartLoading, setCartLoading] = useState(true);
 
-  // 🔁 Load cart ONLY after auth is ready
+  // 🔁 Load cart after auth is ready
   useEffect(() => {
     if (loading) return;
 
@@ -24,56 +24,62 @@ export function CartProvider({ children }) {
       }
 
       setCartLoading(true);
+
       try {
         const res = await api.get("/cart");
 
         const hydratedCart = await Promise.all(
           (res.data || []).map(async (item) => {
-            // ✅ Support BOTH backend shapes safely
             const productId = item.productId ?? item.product?.id;
-            if (!productId) return null;
 
-            const productRes = await api.get(`/products/${productId}`);
+            let product = item.product ?? null;
+
+            // 🔒 NEVER drop cart rows
+            if (productId) {
+              try {
+                const productRes = await api.get(`/products/${productId}`);
+                product = productRes.data;
+              } catch {
+                // product fetch failed → KEEP cart item
+              }
+            }
 
             return {
               id: item.id,
               quantity: item.quantity,
-              product: productRes.data,
+              product,
             };
           })
         );
 
-        // ✅ Remove failed/null entries safely
-        setCart(hydratedCart.filter(Boolean));
+        setCart(hydratedCart);
       } catch (err) {
         console.error("Failed to load cart:", err);
-        setCart([]);
+        // ❗ DO NOT clear cart on error
       } finally {
         setCartLoading(false);
       }
     };
 
     loadCart();
-  }, [isAuthenticated, loading]);
+  }, [loading]);
 
-  // 🛒 ADD TO CART (OPTIMISTIC + SAFE)
+  // 🛒 ADD TO CART (OPTIMISTIC & SAFE)
   const addToCart = async (product, quantity = 1) => {
     const token = getToken();
-    if (!token) {
-      throw new Error("LOGIN_REQUIRED");
-    }
+    if (!token) throw new Error("LOGIN_REQUIRED");
 
     const existing = cart.find(
-      (item) => item.product.id === product.id
+      (item) => item.product?.id === product.id
     );
 
     const tempId = Date.now();
 
-    // 🔥 Optimistic UI update
+    // Optimistic UI
     if (existing) {
       setCart((prev) =>
         prev.map((item) =>
-          item.product.id === product.id
+          item.product?.id === product.id
             ? { ...item, quantity: item.quantity + quantity }
             : item
         )
@@ -95,10 +101,10 @@ export function CartProvider({ children }) {
         quantity,
       });
 
-      // ✅ Replace optimistic item with backend ID
+      // Replace temp row with backend row
       setCart((prev) =>
         prev.map((item) =>
-          item.id === tempId || item.product.id === product.id
+          item.id === tempId || item.product?.id === product.id
             ? {
                 id: res.data.id,
                 quantity: res.data.quantity,
@@ -108,11 +114,11 @@ export function CartProvider({ children }) {
         )
       );
     } catch (err) {
-      // 🔙 Rollback on failure
+      // Rollback
       if (existing) {
         setCart((prev) =>
           prev.map((item) =>
-            item.product.id === product.id
+            item.product?.id === product.id
               ? { ...item, quantity: item.quantity - quantity }
               : item
           )
@@ -164,7 +170,7 @@ export function CartProvider({ children }) {
     }
   };
 
-  // 🧹 CLEAR CART
+  // 🧹 CLEAR CART (logout / checkout)
   const clearCart = () => {
     setCart([]);
   };
