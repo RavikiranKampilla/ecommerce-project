@@ -25,29 +25,28 @@ export function CartProvider({ children }) {
 
       setCartLoading(true);
       try {
+        // 1️⃣ Get cart items (productId + quantity)
         const res = await api.get("/cart");
 
-        // ✅ NORMALIZE BACKEND RESPONSE
-        const normalized = (res.data || []).map((item) => ({
-          id: item.id,
-          quantity: item.quantity,
-          product: {
-            id: item.product?.id ?? item.productId,
-            name: item.product?.name ?? item.productName,
-            price: item.product?.price ?? item.productPrice,
-            imageUrl: item.product?.imageUrl ?? item.productImage,
-            stock: item.product?.stock ?? item.stock,
-          },
-        }));
+        // 2️⃣ Hydrate product details for each cart item
+        const hydratedCart = await Promise.all(
+          (res.data || []).map(async (item) => {
+            const productRes = await api.get(
+              `/products/${item.productId}`
+            );
 
-        setCart(normalized);
+            return {
+              id: item.id,
+              quantity: item.quantity,
+              product: productRes.data, // FULL product
+            };
+          })
+        );
+
+        setCart(hydratedCart);
       } catch (err) {
-        if (err.response?.status === 401) {
-          setCart([]);
-        } else {
-          console.error("Failed to load cart:", err);
-          setCart([]);
-        }
+        console.error("Failed to load cart:", err);
+        setCart([]);
       } finally {
         setCartLoading(false);
       }
@@ -56,7 +55,7 @@ export function CartProvider({ children }) {
     loadCart();
   }, [isAuthenticated, loading]);
 
-  // 🛒 ADD TO CART (OPTIMISTIC + NORMALIZED)
+  // 🛒 ADD TO CART (OPTIMISTIC + CONSISTENT SHAPE)
   const addToCart = async (product, quantity = 1) => {
     const token = getToken();
     if (!token) {
@@ -69,7 +68,7 @@ export function CartProvider({ children }) {
       (item) => item.product.id === product.id
     );
 
-    // 🔥 Optimistic update (NORMALIZED SHAPE)
+    // 🔥 Optimistic update
     if (existing) {
       setCart((prev) =>
         prev.map((item) =>
@@ -84,13 +83,7 @@ export function CartProvider({ children }) {
         {
           id: tempId,
           quantity,
-          product: {
-            id: product.id,
-            name: product.name,
-            price: product.price,
-            imageUrl: product.imageUrl,
-            stock: product.stock,
-          },
+          product,
         },
       ]);
     }
@@ -101,23 +94,15 @@ export function CartProvider({ children }) {
         quantity,
       });
 
-      // ✅ Normalize backend response again
-      const normalizedItem = {
-        id: res.data.id,
-        quantity: res.data.quantity,
-        product: {
-          id: res.data.product?.id ?? product.id,
-          name: res.data.product?.name ?? product.name,
-          price: res.data.product?.price ?? product.price,
-          imageUrl: res.data.product?.imageUrl ?? product.imageUrl,
-          stock: res.data.product?.stock ?? product.stock,
-        },
-      };
-
+      // Replace temp item with backend item
       setCart((prev) =>
         prev.map((item) =>
           item.id === tempId || item.product.id === product.id
-            ? normalizedItem
+            ? {
+                id: res.data.id,
+                quantity: res.data.quantity,
+                product,
+              }
             : item
         )
       );
@@ -178,6 +163,7 @@ export function CartProvider({ children }) {
     }
   };
 
+  // 🧹 CLEAR CART
   const clearCart = () => {
     setCart([]);
   };
