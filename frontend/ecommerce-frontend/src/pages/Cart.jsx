@@ -1,14 +1,22 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import Navbar from "../components/Navbar";
-import { useCart } from "../context/CartContext";
 import api from "../api";
 
 export default function Cart() {
-  const { cart, loadCart } = useCart();
+  const [cart, setCart] = useState([]);
   const navigate = useNavigate();
 
-  // Reload cart when component mounts (e.g., after returning from checkout)
+  // Load cart once
+  const loadCart = async () => {
+    try {
+      const res = await api.get("/cart");
+      setCart(res.data);
+    } catch {
+      setCart([]);
+    }
+  };
+
   useEffect(() => {
     loadCart();
   }, []);
@@ -17,12 +25,26 @@ export default function Cart() {
   const increase = async (item) => {
     if (item.quantity >= item.stock) return;
 
+    // instant UI update
+    setCart((prev) =>
+      prev.map((i) =>
+        i.id === item.id
+          ? { ...i, quantity: i.quantity + 1 }
+          : i
+      )
+    );
+
     try {
       await api.put(`/cart/increase/${item.id}`);
-      loadCart(); // Reload to sync with backend
     } catch {
-      // API failed, reload to ensure sync
-      loadCart();
+      // rollback if API fails
+      setCart((prev) =>
+        prev.map((i) =>
+          i.id === item.id
+            ? { ...i, quantity: i.quantity - 1 }
+            : i
+        )
+      );
     }
   };
 
@@ -31,21 +53,40 @@ export default function Cart() {
     const current = cart.find((i) => i.id === id);
     if (!current || current.quantity <= 1) return;
 
+    // instant UI update
+    setCart((prev) =>
+      prev.map((i) =>
+        i.id === id
+          ? { ...i, quantity: i.quantity - 1 }
+          : i
+      )
+    );
+
     try {
       await api.put(`/cart/decrease/${id}`);
-      loadCart(); // Reload to sync with backend
     } catch {
-      loadCart();
+      // rollback
+      setCart((prev) =>
+        prev.map((i) =>
+          i.id === id
+            ? { ...i, quantity: i.quantity + 1 }
+            : i
+        )
+      );
     }
   };
 
   // ✅ REMOVE (OPTIMISTIC)
   const remove = async (id) => {
+    const backup = cart;
+
+    // instant UI update
+    setCart((prev) => prev.filter((i) => i.id !== id));
+
     try {
       await api.delete(`/cart/${id}`);
-      loadCart(); // Reload to sync with backend
     } catch {
-      loadCart();
+      setCart(backup);
     }
   };
 
