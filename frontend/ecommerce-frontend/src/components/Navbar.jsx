@@ -42,11 +42,17 @@ export default function Navbar() {
     >
       {/* Clickable Brand → Home */}
       <h2
-        style={{ cursor: "pointer" }}
-        onClick={() => navigate("/")}
-      >
-        E-Commerce
-      </h2>
+  onClick={() => navigate("/")}
+  style={{
+    cursor: "pointer",
+    userSelect: "none",      // ⛔ prevents text cursor
+    WebkitUserSelect: "none",
+    MozUserSelect: "none",
+  }}
+>
+  E-Commerce
+</h2>
+
 
       <div style={{ display: "flex", gap: "20px", alignItems: "center" }}>
         <Link to="/">Home</Link>
