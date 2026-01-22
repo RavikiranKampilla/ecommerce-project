@@ -32,7 +32,7 @@ public class SecurityConfig {
             // ❌ CSRF not needed for JWT
             .csrf(csrf -> csrf.disable())
 
-            // ✅ ENABLE CORS (uses CorsConfig)
+            // ✅ ENABLE CORS
             .cors(cors -> {})
 
             // ❌ Stateless JWT
@@ -52,12 +52,13 @@ public class SecurityConfig {
 
             .authorizeHttpRequests(auth -> auth
 
-                // 🔥 MUST: allow CORS preflight
+                // 🔥 CORS preflight
                 .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
 
-                // 🔥 MUST: allow root (wake Render)
+                // 🔥 PUBLIC ENDPOINTS (Render wake-up included)
                 .requestMatchers(
                     "/",
+                    "/ping",          // ✅ ADDED (IMPORTANT)
                     "/auth/**",
                     "/products/**",
                     "/categories/**",
