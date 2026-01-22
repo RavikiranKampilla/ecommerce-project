@@ -5,13 +5,13 @@ const AuthContext = createContext();
 
 export function AuthProvider({ children }) {
   const [isAuthenticated, setIsAuthenticated] = useState(() => {
-    // Initialize from localStorage immediately
+    // Initialize from localStorage immediately (synchronous)
     return !!getToken();
   });
-  const [loading, setLoading] = useState(false);
+  const [authLoading, setAuthLoading] = useState(false);
 
   useEffect(() => {
-    // Sync with localStorage on mount
+    // Sync with localStorage on mount (already initialized synchronously, so no loading needed)
     const token = getToken();
     setIsAuthenticated(!!token);
   }, []);
@@ -27,7 +27,7 @@ export function AuthProvider({ children }) {
   };
 
   return (
-    <AuthContext.Provider value={{ isAuthenticated, login, logout, loading }}>
+    <AuthContext.Provider value={{ isAuthenticated, login, logout, authLoading }}>
       {children}
     </AuthContext.Provider>
   );

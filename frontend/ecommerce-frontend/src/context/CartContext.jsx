@@ -1,6 +1,7 @@
 import { createContext, useContext, useEffect, useState } from "react";
 import api from "../api";
 import { useAuth } from "./AuthContext";
+import { getToken } from "../utils/auth";
 
 const CartContext = createContext();
 
@@ -58,7 +59,9 @@ export function CartProvider({ children }) {
 
   // ✅ ADD TO CART (OPTIMISTIC + API SYNC)
   const addToCart = async (product, quantity = 1) => {
-    if (!isAuthenticated) {
+    // Check token directly to avoid auth state race condition
+    const token = getToken();
+    if (!token) {
       throw new Error("LOGIN_REQUIRED");
     }
 
