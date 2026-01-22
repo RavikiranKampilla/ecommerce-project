@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
+import { useAuth } from "../context/AuthContext";
 import "./Auth.css";
 
 const API_BASE = "https://ecommerce-project-7bi8.onrender.com";
@@ -9,10 +10,16 @@ function Register() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false); // ✅ UX
+
   const navigate = useNavigate();
+  const { login } = useAuth();
 
   const register = async () => {
+    if (loading) return;
+
     setError("");
+    setLoading(true);
 
     try {
       const res = await fetch(`${API_BASE}/auth/register`, {
@@ -20,27 +27,22 @@ function Register() {
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({
-          name,
-          email,
-          password,
-        }),
+        body: JSON.stringify({ name, email, password }),
       });
 
       const data = await res.json();
 
       if (!res.ok) {
         setError(data.error || "Registration failed");
+        setLoading(false);
         return;
       }
 
-      // ✅ SAVE TOKEN
-      localStorage.setItem("token", data.token);
-
-      // ✅ GO TO HOME
+      login(data.token);
       navigate("/", { replace: true });
     } catch (err) {
       setError("Backend not reachable");
+      setLoading(false);
     }
   };
 
@@ -54,6 +56,7 @@ function Register() {
           className="auth-input"
           placeholder="Name"
           value={name}
+          disabled={loading}
           onChange={(e) => setName(e.target.value)}
         />
 
@@ -62,6 +65,7 @@ function Register() {
           type="email"
           placeholder="Email"
           value={email}
+          disabled={loading}
           onChange={(e) => setEmail(e.target.value)}
         />
 
@@ -70,11 +74,16 @@ function Register() {
           type="password"
           placeholder="Password"
           value={password}
+          disabled={loading}
           onChange={(e) => setPassword(e.target.value)}
         />
 
-        <button className="auth-btn" onClick={register}>
-          Register
+        <button
+          className="auth-btn"
+          onClick={register}
+          disabled={loading}
+        >
+          {loading ? "Creating account..." : "Register"}
         </button>
 
         {error && <p className="auth-error">{error}</p>}

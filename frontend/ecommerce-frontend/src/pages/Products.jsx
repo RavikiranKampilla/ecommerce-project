@@ -7,6 +7,7 @@ import { toast } from "react-toastify";
 export default function Products() {
   const { id } = useParams();
   const [products, setProducts] = useState([]);
+  const [addingId, setAddingId] = useState(null); // ✅ instant feedback
 
   useEffect(() => {
     api.get(`/products/category/${id}`)
@@ -14,7 +15,11 @@ export default function Products() {
       .catch(() => toast.error("Failed to load products"));
   }, [id]);
 
+  // ⚡ FAST + SAFE ADD TO CART
   const addToCart = async (product) => {
+    // instant click feedback
+    setAddingId(product.id);
+
     try {
       await api.post("/cart", {
         productId: product.id,
@@ -25,17 +30,20 @@ export default function Products() {
     } catch (err) {
       if (err.response?.status === 401) {
         toast.error("Please login to add to cart");
-      } else if (err.response?.status === 409) {
+      } else if (err.response?.status === 400 || err.response?.status === 409) {
         toast.error("Out of stock");
       } else {
         toast.error("Unable to add to cart");
       }
+    } finally {
+      setAddingId(null); // reset button
     }
   };
 
   return (
     <>
       <Navbar />
+
       <div className="container">
         <h2>Products</h2>
 
@@ -46,17 +54,20 @@ export default function Products() {
               <h3>{p.name}</h3>
               <p>₹{p.price}</p>
 
-              {/* ✅ ONLY ADDITION */}
               <p style={{ color: "green", fontSize: "14px" }}>
                 Only {p.stock} left
               </p>
 
-              <button
-                disabled={p.stock === 0}
-                onClick={() => addToCart(p)}
-              >
-                {p.stock === 0 ? "Out of Stock" : "Add to Cart"}
-              </button>
+              {p.stock === 0 ? (
+                <button disabled>Out of Stock</button>
+              ) : (
+                <button
+                  onClick={() => addToCart(p)}
+                  disabled={addingId === p.id}
+                >
+                  {addingId === p.id ? "Adding..." : "Add to Cart"}
+                </button>
+              )}
             </div>
           ))}
         </div>

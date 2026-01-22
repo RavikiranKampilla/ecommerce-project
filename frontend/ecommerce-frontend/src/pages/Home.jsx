@@ -6,21 +6,26 @@ import { toast } from "react-toastify";
 
 export default function Home() {
   const [products, setProducts] = useState([]);
+  const [addingId, setAddingId] = useState(null); // ✅ UX feedback
 
-  // ✅ LOAD RECOMMENDED PRODUCTS (BACKEND CONTROLLED)
+  // LOAD RECOMMENDED PRODUCTS
   useEffect(() => {
-    api.get("/products/recommended")
-      .then(res => setProducts(res.data))
+    api
+      .get("/products/recommended")
+      .then((res) => setProducts(res.data))
       .catch(() => toast.error("Failed to load products"));
   }, []);
 
-  // ✅ ADD TO CART
+  // ADD TO CART (FAST FEEL)
   const addToCart = async (product) => {
     const token = localStorage.getItem("token");
     if (!token) {
       toast.error("Please login to add to cart");
       return;
     }
+
+    // ⚡ INSTANT CLICK FEEDBACK
+    setAddingId(product.id);
 
     try {
       await api.post("/cart", {
@@ -34,13 +39,13 @@ export default function Home() {
 
       if (status === 401) {
         toast.error("Please login to add to cart");
-      } else if (status === 400) {
+      } else if (status === 400 || status === 409) {
         toast.error("Out of stock");
-      } else if (status === 404) {
-        toast.error("Product not found");
       } else {
         toast.error("Unable to add to cart");
       }
+    } finally {
+      setAddingId(null); // reset button
     }
   };
 
@@ -52,7 +57,7 @@ export default function Home() {
         <h2 className="section-title">Recommended Products</h2>
 
         <div className="grid">
-          {products.map(p => (
+          {products.map((p) => (
             <div key={p.id} className="card">
               <img src={p.imageUrl} alt={p.name} />
 
@@ -69,14 +74,14 @@ export default function Home() {
                 </div>
               )}
 
-              {/* ✅ FIX: NO onClick when OUT OF STOCK */}
               {p.stock === 0 ? (
-                <button disabled>
-                  Out of Stock
-                </button>
+                <button disabled>Out of Stock</button>
               ) : (
-                <button onClick={() => addToCart(p)}>
-                  Add to Cart
+                <button
+                  onClick={() => addToCart(p)}
+                  disabled={addingId === p.id}
+                >
+                  {addingId === p.id ? "Adding..." : "Add to Cart"}
                 </button>
               )}
             </div>

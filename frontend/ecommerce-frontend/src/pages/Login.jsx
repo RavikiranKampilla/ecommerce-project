@@ -9,11 +9,16 @@ function Login() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false); // ✅ UX
+
   const navigate = useNavigate();
   const { login: authLogin } = useAuth();
 
   const login = async () => {
+    if (loading) return;
+
     setError("");
+    setLoading(true);
 
     try {
       const res = await fetch(`${API_BASE}/auth/login`, {
@@ -31,21 +36,28 @@ function Login() {
         } catch {
           setError(text || "Invalid email or password");
         }
+        setLoading(false);
         return;
       }
 
       const data = JSON.parse(text);
+
       authLogin(data.token);
       navigate("/", { replace: true });
     } catch {
       setError("Server error. Please try again.");
+      setLoading(false);
     }
   };
 
   return (
     <div className="auth-page">
       <div className="auth-top">
-        <button className="auth-back" onClick={() => navigate("/")}>
+        <button
+          className="auth-back"
+          onClick={() => navigate("/")}
+          disabled={loading}
+        >
           ← Back
         </button>
       </div>
@@ -59,6 +71,7 @@ function Login() {
           className="auth-input"
           placeholder="Email"
           value={email}
+          disabled={loading}
           onChange={(e) => setEmail(e.target.value)}
         />
 
@@ -67,6 +80,7 @@ function Login() {
           type="password"
           placeholder="Password"
           value={password}
+          disabled={loading}
           onChange={(e) => setPassword(e.target.value)}
         />
 
@@ -74,8 +88,12 @@ function Login() {
           <Link to="/forgot-password">Forgot password?</Link>
         </div>
 
-        <button className="auth-btn" onClick={login}>
-          Login
+        <button
+          className="auth-btn"
+          onClick={login}
+          disabled={loading}
+        >
+          {loading ? "Signing in..." : "Login"}
         </button>
 
         {error && <p className="auth-error">{error}</p>}

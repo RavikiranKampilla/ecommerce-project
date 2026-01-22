@@ -7,42 +7,90 @@ export default function Cart() {
   const [cart, setCart] = useState([]);
   const navigate = useNavigate();
 
+  // Load cart once
   const loadCart = async () => {
-    const res = await api.get("/cart");
-    setCart(res.data);
+    try {
+      const res = await api.get("/cart");
+      setCart(res.data);
+    } catch {
+      setCart([]);
+    }
   };
 
   useEffect(() => {
     loadCart();
   }, []);
 
-  // ✅ INCREASE (BACKEND = SOURCE OF TRUTH)
+  // ✅ INCREASE (OPTIMISTIC)
   const increase = async (item) => {
-    if (item.quantity >= item.stock) {
-      alert("Max stock reached");
-      return;
-    }
+    if (item.quantity >= item.stock) return;
 
-    await api.put(`/cart/increase/${item.id}`);
-    await loadCart();
+    // instant UI update
+    setCart((prev) =>
+      prev.map((i) =>
+        i.id === item.id
+          ? { ...i, quantity: i.quantity + 1 }
+          : i
+      )
+    );
+
+    try {
+      await api.put(`/cart/increase/${item.id}`);
+    } catch {
+      // rollback if API fails
+      setCart((prev) =>
+        prev.map((i) =>
+          i.id === item.id
+            ? { ...i, quantity: i.quantity - 1 }
+            : i
+        )
+      );
+    }
   };
 
-  // ✅ DECREASE (STOP AT 1)
+  // ✅ DECREASE (OPTIMISTIC)
   const decrease = async (id) => {
-    const current = cart.find(i => i.id === id);
+    const current = cart.find((i) => i.id === id);
     if (!current || current.quantity <= 1) return;
 
-    await api.put(`/cart/decrease/${id}`);
-    await loadCart();
+    // instant UI update
+    setCart((prev) =>
+      prev.map((i) =>
+        i.id === id
+          ? { ...i, quantity: i.quantity - 1 }
+          : i
+      )
+    );
+
+    try {
+      await api.put(`/cart/decrease/${id}`);
+    } catch {
+      // rollback
+      setCart((prev) =>
+        prev.map((i) =>
+          i.id === id
+            ? { ...i, quantity: i.quantity + 1 }
+            : i
+        )
+      );
+    }
   };
 
-  // ✅ REMOVE ITEM
+  // ✅ REMOVE (OPTIMISTIC)
   const remove = async (id) => {
-    await api.delete(`/cart/${id}`);
-    await loadCart();
+    const backup = cart;
+
+    // instant UI update
+    setCart((prev) => prev.filter((i) => i.id !== id));
+
+    try {
+      await api.delete(`/cart/${id}`);
+    } catch {
+      setCart(backup);
+    }
   };
 
-  // ✅ PROTECT AGAINST NaN
+  // Total
   const total = cart.reduce(
     (sum, item) => sum + (item.price || 0) * (item.quantity || 0),
     0
@@ -70,22 +118,33 @@ export default function Cart() {
         ) : (
           <>
             <div className="grid">
-              {cart.map(item => (
+              {cart.map((item) => (
                 <div key={item.id} className="card">
                   <img
                     src={item.imageUrl}
                     alt={item.name}
-                    onError={e =>
-                      (e.target.src = "https://via.placeholder.com/300")
+                    onError={(e) =>
+                      (e.target.src =
+                        "https://via.placeholder.com/300")
                     }
                   />
 
                   <h3>{item.name}</h3>
                   <p>₹{item.price}</p>
 
-                  <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
-                    <button onClick={() => decrease(item.id)}>-</button>
+                  <div
+                    style={{
+                      display: "flex",
+                      gap: 10,
+                      alignItems: "center",
+                    }}
+                  >
+                    <button onClick={() => decrease(item.id)}>
+                      −
+                    </button>
+
                     <strong>{item.quantity}</strong>
+
                     <button
                       onClick={() => increase(item)}
                       disabled={item.quantity >= item.stock}
@@ -95,13 +154,21 @@ export default function Cart() {
                   </div>
 
                   {item.quantity >= item.stock && (
-                    <div style={{ color: "red", fontSize: 12 }}>
+                    <div
+                      style={{
+                        color: "red",
+                        fontSize: 12,
+                      }}
+                    >
                       Max stock reached
                     </div>
                   )}
 
                   <button
-                    style={{ background: "#ef4444", marginTop: 10 }}
+                    style={{
+                      background: "#ef4444",
+                      marginTop: 10,
+                    }}
                     onClick={() => remove(item.id)}
                   >
                     Remove
@@ -117,7 +184,9 @@ export default function Cart() {
             <button
               className="buy-btn"
               style={{ marginTop: 20 }}
-              onClick={() => navigate("/checkout", { state: { cart } })}
+              onClick={() =>
+                navigate("/checkout", { state: { cart } })
+              }
             >
               Proceed to Checkout
             </button>
