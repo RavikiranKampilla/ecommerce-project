@@ -1,6 +1,7 @@
 import { createContext, useContext, useEffect, useState } from "react";
 import api from "../api";
 import { useAuth } from "./AuthContext";
+import { getToken } from "../utils/auth";
 
 const CartContext = createContext();
 
@@ -15,7 +16,9 @@ export function CartProvider({ children }) {
     if (loading) return; // wait for auth init
 
     const loadCart = async () => {
-      if (!isAuthenticated) {
+      // ✅ Check token directly for freshest auth state
+      const token = getToken();
+      if (!token) {
         setCart([]);
         setCartLoading(false);
         return;
@@ -37,9 +40,9 @@ export function CartProvider({ children }) {
 
   // 🛒 ADD TO CART (OPTIMISTIC + SAFE)
   const addToCart = async (product, quantity = 1) => {
-    if (loading) return; // prevent false LOGIN_REQUIRED
-
-    if (!isAuthenticated) {
+    // ✅ Check token DIRECTLY - React state can be stale after login
+    const token = getToken();
+    if (!token) {
       throw new Error("LOGIN_REQUIRED");
     }
 

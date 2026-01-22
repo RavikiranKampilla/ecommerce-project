@@ -4,7 +4,7 @@ import Navbar from "../components/Navbar";
 import api from "../api";
 import { toast } from "react-toastify";
 import { useCart } from "../context/CartContext";
-import { useAuth } from "../context/AuthContext";
+import { getToken } from "../utils/auth";
 
 export default function Products() {
   const { id } = useParams();
@@ -13,7 +13,6 @@ export default function Products() {
   const [loading, setLoading] = useState(true);
 
   const { addToCart } = useCart();
-  const { isAuthenticated, loading: authLoading } = useAuth();
 
   useEffect(() => {
     setLoading(true);
@@ -24,11 +23,10 @@ export default function Products() {
       .finally(() => setLoading(false));
   }, [id]);
 
-  // ✅ CORRECT ADD TO CART
+  // ✅ ADD TO CART - Check token directly for immediate auth
   const handleAddToCart = async (product) => {
-    if (authLoading) return;
-
-    if (!isAuthenticated) {
+    // ✅ Check token DIRECTLY - avoids stale React state after login
+    if (!getToken()) {
       toast.error("Please login to add to cart");
       return;
     }
@@ -38,8 +36,12 @@ export default function Products() {
     try {
       await addToCart(product, 1);
       toast.success("Added to cart");
-    } catch {
-      toast.error("Unable to add to cart");
+    } catch (err) {
+      if (err.message === "LOGIN_REQUIRED") {
+        toast.error("Please login to add to cart");
+      } else {
+        toast.error("Unable to add to cart");
+      }
     } finally {
       setAddingId(null);
     }
