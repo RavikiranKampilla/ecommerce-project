@@ -65,8 +65,8 @@ export default function Home() {
         <h2 className="section-title">Recommended Products</h2>
 
         <div className="grid">
-          {loading || products.length === 0 ? (
-            // Show skeleton cards while loading or no products
+          {loading ? (
+            // Show skeleton cards while loading
             [...Array(8)].map((_, i) => (
               <div key={i} className="card skeleton-card">
                 <div className="skeleton skeleton-image"></div>
@@ -76,6 +76,8 @@ export default function Home() {
                 <div className="skeleton skeleton-button"></div>
               </div>
             ))
+          ) : products.length === 0 ? (
+            <p>No products available</p>
           ) : (
             // Show real products after successful load
             products.map((p) => (
