@@ -6,21 +6,22 @@ export default function Cart() {
   const {
     cart,
     cartLoading,
-    updateQuantity,
+    increaseQuantity,
+    decreaseQuantity,
     removeFromCart,
   } = useCart();
 
   const navigate = useNavigate();
 
   const increase = (item) => {
-    if (item.quantity < item.stock) {
-      updateQuantity(item.id, item.quantity + 1);
+    if (item.quantity < (item.stock || 999)) {
+      increaseQuantity(item.id);
     }
   };
 
   const decrease = (item) => {
     if (item.quantity > 1) {
-      updateQuantity(item.id, item.quantity - 1);
+      decreaseQuantity(item.id);
     }
   };
 

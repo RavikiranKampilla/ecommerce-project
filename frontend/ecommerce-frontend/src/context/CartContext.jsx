@@ -113,24 +113,50 @@ export function CartProvider({ children }) {
     }
   };
 
-  // ➕➖ UPDATE QUANTITY
-  const updateQuantity = async (itemId, newQuantity) => {
+  // ➕ INCREASE QUANTITY
+  const increaseQuantity = async (itemId) => {
     const item = cart.find((i) => i.id === itemId);
     if (!item) return;
 
     const oldQuantity = item.quantity;
 
+    // Optimistic UI
     setCart((prev) =>
       prev.map((i) =>
-        i.id === itemId ? { ...i, quantity: newQuantity } : i
+        i.id === itemId ? { ...i, quantity: i.quantity + 1 } : i
       )
     );
 
     try {
-      const endpoint =
-        newQuantity > oldQuantity ? "increase" : "decrease";
-      await api.put(`/cart/${endpoint}/${itemId}`);
+      await api.put(`/cart/increase/${itemId}`);
     } catch {
+      // Rollback
+      setCart((prev) =>
+        prev.map((i) =>
+          i.id === itemId ? { ...i, quantity: oldQuantity } : i
+        )
+      );
+    }
+  };
+
+  // ➖ DECREASE QUANTITY
+  const decreaseQuantity = async (itemId) => {
+    const item = cart.find((i) => i.id === itemId);
+    if (!item || item.quantity <= 1) return;
+
+    const oldQuantity = item.quantity;
+
+    // Optimistic UI
+    setCart((prev) =>
+      prev.map((i) =>
+        i.id === itemId ? { ...i, quantity: i.quantity - 1 } : i
+      )
+    );
+
+    try {
+      await api.put(`/cart/decrease/${itemId}`);
+    } catch {
+      // Rollback
       setCart((prev) =>
         prev.map((i) =>
           i.id === itemId ? { ...i, quantity: oldQuantity } : i
@@ -162,7 +188,8 @@ export function CartProvider({ children }) {
         cart,
         cartLoading,
         addToCart,
-        updateQuantity,
+        increaseQuantity,
+        decreaseQuantity,
         removeFromCart,
         clearCart,
       }}
