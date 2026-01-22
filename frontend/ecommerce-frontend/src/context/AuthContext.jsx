@@ -4,16 +4,13 @@ import { getToken } from "../utils/auth";
 const AuthContext = createContext();
 
 export function AuthProvider({ children }) {
-  const [isAuthenticated, setIsAuthenticated] = useState(() => {
-    // Initialize from localStorage immediately
-    return !!getToken();
-  });
-  const [loading, setLoading] = useState(false);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Sync with localStorage on mount
     const token = getToken();
     setIsAuthenticated(!!token);
+    setLoading(false);
   }, []);
 
   const login = (token) => {
@@ -27,8 +24,8 @@ export function AuthProvider({ children }) {
   };
 
   return (
-    <AuthContext.Provider value={{ isAuthenticated, login, logout, loading }}>
-      {children}
+    <AuthContext.Provider value={{ isAuthenticated, login, logout }}>
+      {!loading && children}
     </AuthContext.Provider>
   );
 }
