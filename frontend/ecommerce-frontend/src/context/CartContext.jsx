@@ -13,10 +13,9 @@ export function CartProvider({ children }) {
 
   // 🔁 Load cart ONLY after auth is ready
   useEffect(() => {
-    if (loading) return; // wait for auth init
+    if (loading) return;
 
     const loadCart = async () => {
-      // ✅ Check token directly for freshest auth state
       const token = getToken();
       if (!token) {
         setCart([]);
@@ -27,9 +26,22 @@ export function CartProvider({ children }) {
       setCartLoading(true);
       try {
         const res = await api.get("/cart");
-        setCart(res.data || []);
+
+        // ✅ NORMALIZE BACKEND RESPONSE
+        const normalized = (res.data || []).map((item) => ({
+          id: item.id,
+          quantity: item.quantity,
+          product: {
+            id: item.product?.id ?? item.productId,
+            name: item.product?.name ?? item.productName,
+            price: item.product?.price ?? item.productPrice,
+            imageUrl: item.product?.imageUrl ?? item.productImage,
+            stock: item.product?.stock ?? item.stock,
+          },
+        }));
+
+        setCart(normalized);
       } catch (err) {
-        // Silently handle 401 errors when not authenticated
         if (err.response?.status === 401) {
           setCart([]);
         } else {
@@ -44,24 +56,24 @@ export function CartProvider({ children }) {
     loadCart();
   }, [isAuthenticated, loading]);
 
-  // 🛒 ADD TO CART (OPTIMISTIC + SAFE)
+  // 🛒 ADD TO CART (OPTIMISTIC + NORMALIZED)
   const addToCart = async (product, quantity = 1) => {
-    // ✅ Check token DIRECTLY - React state can be stale after login
     const token = getToken();
     if (!token) {
       throw new Error("LOGIN_REQUIRED");
     }
 
     const tempId = Date.now();
+
     const existing = cart.find(
-      (item) => item.productId === product.id
+      (item) => item.product.id === product.id
     );
 
-    // 🔥 Optimistic UI update
+    // 🔥 Optimistic update (NORMALIZED SHAPE)
     if (existing) {
       setCart((prev) =>
         prev.map((item) =>
-          item.productId === product.id
+          item.product.id === product.id
             ? { ...item, quantity: item.quantity + quantity }
             : item
         )
@@ -71,12 +83,14 @@ export function CartProvider({ children }) {
         ...prev,
         {
           id: tempId,
-          productId: product.id,
-          name: product.name,
-          price: product.price,
-          imageUrl: product.imageUrl,
           quantity,
-          stock: product.stock,
+          product: {
+            id: product.id,
+            name: product.name,
+            price: product.price,
+            imageUrl: product.imageUrl,
+            stock: product.stock,
+          },
         },
       ]);
     }
@@ -87,20 +101,32 @@ export function CartProvider({ children }) {
         quantity,
       });
 
-      // ✅ Replace optimistic item with backend item
+      // ✅ Normalize backend response again
+      const normalizedItem = {
+        id: res.data.id,
+        quantity: res.data.quantity,
+        product: {
+          id: res.data.product?.id ?? product.id,
+          name: res.data.product?.name ?? product.name,
+          price: res.data.product?.price ?? product.price,
+          imageUrl: res.data.product?.imageUrl ?? product.imageUrl,
+          stock: res.data.product?.stock ?? product.stock,
+        },
+      };
+
       setCart((prev) =>
         prev.map((item) =>
-          item.id === tempId || item.productId === product.id
-            ? res.data
+          item.id === tempId || item.product.id === product.id
+            ? normalizedItem
             : item
         )
       );
     } catch (err) {
-      // 🔙 Rollback on failure
+      // 🔙 Rollback
       if (existing) {
         setCart((prev) =>
           prev.map((item) =>
-            item.productId === product.id
+            item.product.id === product.id
               ? { ...item, quantity: item.quantity - quantity }
               : item
           )
@@ -152,7 +178,6 @@ export function CartProvider({ children }) {
     }
   };
 
-  // 🧹 CLEAR CART (LOGOUT / ORDER)
   const clearCart = () => {
     setCart([]);
   };
