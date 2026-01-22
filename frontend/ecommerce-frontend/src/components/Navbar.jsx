@@ -1,5 +1,6 @@
 import { Link, useNavigate } from "react-router-dom";
 import { useMemo } from "react";
+import { useCart } from "../context/CartContext";
 
 function parseJwt(token) {
   try {
@@ -11,6 +12,7 @@ function parseJwt(token) {
 
 export default function Navbar() {
   const navigate = useNavigate();
+  const { cart } = useCart();
 
   const token = localStorage.getItem("token");
 
@@ -20,6 +22,7 @@ export default function Navbar() {
   }, [token]);
 
   const isAdmin = payload?.role === "ADMIN";
+  const cartCount = cart.reduce((sum, item) => sum + item.quantity, 0);
 
   const handleLogout = () => {
     localStorage.removeItem("token");
@@ -40,7 +43,11 @@ export default function Navbar() {
       <div style={{ display: "flex", gap: "20px", alignItems: "center" }}>
         <Link to="/">Home</Link>
 
-        {token && !isAdmin && <Link to="/cart">Cart</Link>}
+        {token && !isAdmin && (
+          <Link to="/cart">
+            Cart {cartCount > 0 && `(${cartCount})`}
+          </Link>
+        )}
         {token && !isAdmin && <Link to="/orders">Orders</Link>}
 
         {token && isAdmin && <Link to="/admin/orders">Admin Orders</Link>}

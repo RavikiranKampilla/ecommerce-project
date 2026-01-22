@@ -3,10 +3,12 @@ import { useEffect, useState } from "react";
 import api from "../api";
 import Navbar from "../components/Navbar";
 import { toast } from "react-toastify";
+import { useCart } from "../context/CartContext";
 
 export default function ProductDetails() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const { addToCart } = useCart();
 
   const [product, setProduct] = useState(null);
   const [recommended, setRecommended] = useState([]);
@@ -34,17 +36,11 @@ export default function ProductDetails() {
 
   const handleAddToCart = async () => {
     try {
-      await api.post("/cart", {
-        productId: product.id,
-        quantity: 1,
-      });
-
+      await addToCart(product, 1);
       toast.success("Added to cart");
     } catch (err) {
-      if (err.response?.status === 401) {
+      if (err.message === "LOGIN_REQUIRED") {
         toast.error("Please login to add to cart");
-      } else if (err.response?.status === 409) {
-        toast.error("Out of stock");
       } else {
         toast.error("Unable to add to cart");
       }

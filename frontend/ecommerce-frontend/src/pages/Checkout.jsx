@@ -7,7 +7,7 @@ import api from "../api";
 export default function Checkout() {
   const { state } = useLocation();
   const navigate = useNavigate();
-  const { clearCart } = useCart();
+  const { clearCart, loadCart } = useCart();
 
   // Case 1: Buy Now (single product)
   const singleProduct = state?.product;
@@ -37,8 +37,9 @@ export default function Checkout() {
 
       toast.success("Order placed successfully 🎉");
 
-      // optional: clear frontend cart state (backend already cleared DB)
-      clearCart();
+      // Clear cart and reload to sync with backend
+      await clearCart();
+      await loadCart();
 
       navigate("/order-success");
     } catch (err) {

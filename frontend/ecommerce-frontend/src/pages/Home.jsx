@@ -3,11 +3,13 @@ import Navbar from "../components/Navbar";
 import Categories from "./Categories";
 import api from "../api";
 import { toast } from "react-toastify";
+import { useCart } from "../context/CartContext";
 
 export default function Home() {
   const [products, setProducts] = useState([]);
   const [addingId, setAddingId] = useState(null); // ✅ UX feedback
   const [loading, setLoading] = useState(true); // ✅ Track loading state
+  const { addToCart: addToCartContext } = useCart();
 
   // LOAD RECOMMENDED PRODUCTS
   useEffect(() => {
@@ -36,19 +38,11 @@ export default function Home() {
     setAddingId(product.id);
 
     try {
-      await api.post("/cart", {
-        productId: product.id,
-        quantity: 1,
-      });
-
+      await addToCartContext(product, 1);
       toast.success("Added to cart");
     } catch (err) {
-      const status = err.response?.status;
-
-      if (status === 401) {
+      if (err.message === "LOGIN_REQUIRED") {
         toast.error("Please login to add to cart");
-      } else if (status === 400 || status === 409) {
-        toast.error("Out of stock");
       } else {
         toast.error("Unable to add to cart");
       }
