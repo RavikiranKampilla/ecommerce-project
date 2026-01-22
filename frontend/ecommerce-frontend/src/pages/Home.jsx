@@ -4,50 +4,44 @@ import Categories from "./Categories";
 import api from "../api";
 import { toast } from "react-toastify";
 import { useCart } from "../context/CartContext";
+import { useAuth } from "../context/AuthContext";
 
 export default function Home() {
   const [products, setProducts] = useState([]);
-  const [addingId, setAddingId] = useState(null); // ✅ UX feedback
-  const [loading, setLoading] = useState(true); // ✅ Track loading state
-  const { addToCart: addToCartContext } = useCart();
+  const [addingId, setAddingId] = useState(null);
+  const [loading, setLoading] = useState(true);
+
+  const { addToCart } = useCart();
+  const { isAuthenticated, loading: authLoading } = useAuth();
 
   // LOAD RECOMMENDED PRODUCTS
   useEffect(() => {
     setLoading(true);
     api
       .get("/products/recommended")
-      .then((res) => {
-        setProducts(res.data);
-        setLoading(false);
-      })
-      .catch(() => {
-        toast.error("Failed to load products");
-        setLoading(false);
-      });
+      .then((res) => setProducts(res.data))
+      .catch(() => toast.error("Failed to load products"))
+      .finally(() => setLoading(false));
   }, []);
 
-  // ADD TO CART (FAST FEEL)
-  const addToCart = async (product) => {
-    const token = localStorage.getItem("token");
-    if (!token) {
+  // ✅ CORRECT ADD TO CART
+  const handleAddToCart = async (product) => {
+    if (authLoading) return; // 🔒 wait for auth init
+
+    if (!isAuthenticated) {
       toast.error("Please login to add to cart");
       return;
     }
 
-    // ⚡ INSTANT CLICK FEEDBACK
     setAddingId(product.id);
 
     try {
-      await addToCartContext(product, 1);
+      await addToCart(product, 1);
       toast.success("Added to cart");
-    } catch (err) {
-      if (err.message === "LOGIN_REQUIRED") {
-        toast.error("Please login to add to cart");
-      } else {
-        toast.error("Unable to add to cart");
-      }
+    } catch {
+      toast.error("Unable to add to cart");
     } finally {
-      setAddingId(null); // reset button
+      setAddingId(null);
     }
   };
 
@@ -60,33 +54,29 @@ export default function Home() {
 
         <div className="grid">
           {loading ? (
-            // Show skeleton cards while loading
             [...Array(8)].map((_, i) => (
               <div key={i} className="card skeleton-card">
-                <div className="skeleton skeleton-image"></div>
-                <div className="skeleton skeleton-title"></div>
-                <div className="skeleton skeleton-price"></div>
-                <div className="skeleton skeleton-stock"></div>
-                <div className="skeleton skeleton-button"></div>
+                <div className="skeleton skeleton-image" />
+                <div className="skeleton skeleton-title" />
+                <div className="skeleton skeleton-price" />
+                <div className="skeleton skeleton-stock" />
+                <div className="skeleton skeleton-button" />
               </div>
             ))
           ) : products.length === 0 ? (
             <p>No products available</p>
           ) : (
-            // Show real products after successful load
             products.map((p) => (
               <div key={p.id} className="card">
-                <img src={p.imageUrl} alt={p.name} loading="lazy" decoding="async" />
+                <img src={p.imageUrl} alt={p.name} loading="lazy" />
 
                 <h4>{p.name}</h4>
                 <div className="price">₹{p.price}</div>
 
                 {p.stock === 0 ? (
-                  <div style={{ color: "red", fontSize: 14 }}>
-                    Out of Stock
-                  </div>
+                  <div style={{ color: "red" }}>Out of Stock</div>
                 ) : (
-                  <div style={{ color: "green", fontSize: 14 }}>
+                  <div style={{ color: "green" }}>
                     Only {p.stock} left
                   </div>
                 )}
@@ -95,7 +85,7 @@ export default function Home() {
                   <button disabled>Out of Stock</button>
                 ) : (
                   <button
-                    onClick={() => addToCart(p)}
+                    onClick={() => handleAddToCart(p)}
                     disabled={addingId === p.id}
                   >
                     {addingId === p.id ? "Adding..." : "Add to Cart"}
