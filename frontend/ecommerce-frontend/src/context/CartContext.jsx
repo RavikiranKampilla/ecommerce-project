@@ -76,7 +76,7 @@ export function CartProvider({ children }) {
     }
 
     try {
-      const res = await api.post("/cart/add", {
+      const res = await api.post("/cart", {
         productId: product.id,
         quantity,
       });
