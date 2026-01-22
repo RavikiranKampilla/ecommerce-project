@@ -6,11 +6,13 @@ const CartContext = createContext();
 
 export function CartProvider({ children }) {
   const { isAuthenticated, loading } = useAuth();
+
   const [cart, setCart] = useState([]);
   const [cartLoading, setCartLoading] = useState(true);
 
+  // 🔁 Load cart ONLY after auth is ready
   useEffect(() => {
-    if (loading) return; // 🔒 wait for auth to be ready
+    if (loading) return; // wait for auth init
 
     const loadCart = async () => {
       if (!isAuthenticated) {
@@ -22,7 +24,7 @@ export function CartProvider({ children }) {
       setCartLoading(true);
       try {
         const res = await api.get("/cart");
-        setCart(res.data);
+        setCart(res.data || []);
       } catch {
         setCart([]);
       } finally {
@@ -33,7 +35,10 @@ export function CartProvider({ children }) {
     loadCart();
   }, [isAuthenticated, loading]);
 
+  // 🛒 ADD TO CART (OPTIMISTIC + SAFE)
   const addToCart = async (product, quantity = 1) => {
+    if (loading) return; // prevent false LOGIN_REQUIRED
+
     if (!isAuthenticated) {
       throw new Error("LOGIN_REQUIRED");
     }
@@ -43,6 +48,7 @@ export function CartProvider({ children }) {
       (item) => item.productId === product.id
     );
 
+    // 🔥 Optimistic UI update
     if (existing) {
       setCart((prev) =>
         prev.map((item) =>
@@ -72,6 +78,7 @@ export function CartProvider({ children }) {
         quantity,
       });
 
+      // ✅ Replace optimistic item with backend item
       setCart((prev) =>
         prev.map((item) =>
           item.id === tempId || item.productId === product.id
@@ -80,6 +87,7 @@ export function CartProvider({ children }) {
         )
       );
     } catch (err) {
+      // 🔙 Rollback on failure
       if (existing) {
         setCart((prev) =>
           prev.map((item) =>
@@ -97,6 +105,7 @@ export function CartProvider({ children }) {
     }
   };
 
+  // ➕➖ UPDATE QUANTITY
   const updateQuantity = async (itemId, newQuantity) => {
     const item = cart.find((i) => i.id === itemId);
     if (!item) return;
@@ -122,6 +131,7 @@ export function CartProvider({ children }) {
     }
   };
 
+  // ❌ REMOVE ITEM
   const removeFromCart = async (itemId) => {
     const backup = cart;
     setCart((prev) => prev.filter((i) => i.id !== itemId));
@@ -133,6 +143,7 @@ export function CartProvider({ children }) {
     }
   };
 
+  // 🧹 CLEAR CART (LOGOUT / ORDER)
   const clearCart = async () => {
     const backup = cart;
     setCart([]);
