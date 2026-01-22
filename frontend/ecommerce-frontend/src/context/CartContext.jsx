@@ -28,8 +28,14 @@ export function CartProvider({ children }) {
       try {
         const res = await api.get("/cart");
         setCart(res.data || []);
-      } catch {
-        setCart([]);
+      } catch (err) {
+        // Silently handle 401 errors when not authenticated
+        if (err.response?.status === 401) {
+          setCart([]);
+        } else {
+          console.error("Failed to load cart:", err);
+          setCart([]);
+        }
       } finally {
         setCartLoading(false);
       }
