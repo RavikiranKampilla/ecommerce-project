@@ -1,6 +1,7 @@
 import { Link, useNavigate } from "react-router-dom";
 import { useMemo } from "react";
 import { useCart } from "../context/CartContext";
+import { useAuth } from "../context/AuthContext";
 
 function parseJwt(token) {
   try {
@@ -12,7 +13,8 @@ function parseJwt(token) {
 
 export default function Navbar() {
   const navigate = useNavigate();
-  const { cart } = useCart();
+  const { cart, clearCart } = useCart();
+  const { logout } = useAuth();
 
   const token = localStorage.getItem("token");
 
@@ -25,7 +27,8 @@ export default function Navbar() {
   const cartCount = cart.reduce((sum, item) => sum + item.quantity, 0);
 
   const handleLogout = () => {
-    localStorage.removeItem("token");
+    clearCart(); // Clear cart state
+    logout(); // Clear auth state
     navigate("/login", { replace: true });
   };
 

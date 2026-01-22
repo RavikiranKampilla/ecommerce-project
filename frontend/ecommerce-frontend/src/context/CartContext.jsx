@@ -8,13 +8,15 @@ export function CartProvider({ children }) {
   const { isAuthenticated } = useAuth();
   const [cart, setCart] = useState([]);
   const [cartLoading, setCartLoading] = useState(true);
+  const [initialized, setInitialized] = useState(false);
 
-  // Load cart whenever auth state changes
+  // Load cart only once on mount (after auth is ready)
   useEffect(() => {
     const loadCart = async () => {
       if (!isAuthenticated) {
         setCart([]);
         setCartLoading(false);
+        setInitialized(true);
         return;
       }
 
@@ -26,11 +28,33 @@ export function CartProvider({ children }) {
         setCart([]);
       } finally {
         setCartLoading(false);
+        setInitialized(true);
       }
     };
 
-    loadCart();
-  }, [isAuthenticated]);
+    // Only load on initial mount, not on every auth change
+    if (!initialized) {
+      loadCart();
+    }
+  }, [isAuthenticated, initialized]);
+
+  // Reload cart manually (for logout or explicit refresh)
+  const reloadCart = async () => {
+    if (!isAuthenticated) {
+      setCart([]);
+      return;
+    }
+
+    setCartLoading(true);
+    try {
+      const res = await api.get("/cart");
+      setCart(res.data);
+    } catch {
+      setCart([]);
+    } finally {
+      setCartLoading(false);
+    }
+  };
 
   // ✅ ADD TO CART (OPTIMISTIC + API SYNC)
   const addToCart = async (product, quantity = 1) => {
@@ -171,6 +195,7 @@ export function CartProvider({ children }) {
         updateQuantity,
         removeFromCart,
         clearCart,
+        reloadCart,
       }}
     >
       {children}
