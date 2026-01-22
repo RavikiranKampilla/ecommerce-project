@@ -1,52 +1,61 @@
 import { createContext, useContext, useEffect, useState } from "react";
 import api from "../api";
-import { isAuthenticated } from "../utils/auth";
+import { useAuth } from "./AuthContext";
 
 const CartContext = createContext();
 
 export function CartProvider({ children }) {
+  const { isAuthenticated, loading } = useAuth();
   const [cart, setCart] = useState([]);
+  const [cartLoading, setCartLoading] = useState(true);
 
-  // Load cart on mount
   useEffect(() => {
-    if (!isAuthenticated()) {
-      setCart([]);
-      return;
-    }
+    if (loading) return; // 🔒 wait for auth to be ready
 
-    api
-      .get("/cart")
-      .then((res) => setCart(res.data))
-      .catch(() => setCart([]));
-  }, []);
+    const loadCart = async () => {
+      if (!isAuthenticated) {
+        setCart([]);
+        setCartLoading(false);
+        return;
+      }
 
-  // ✅ ADD TO CART (OPTIMISTIC)
+      setCartLoading(true);
+      try {
+        const res = await api.get("/cart");
+        setCart(res.data);
+      } catch {
+        setCart([]);
+      } finally {
+        setCartLoading(false);
+      }
+    };
+
+    loadCart();
+  }, [isAuthenticated, loading]);
+
   const addToCart = async (product, quantity = 1) => {
-    if (!isAuthenticated()) {
+    if (!isAuthenticated) {
       throw new Error("LOGIN_REQUIRED");
     }
 
-    // 🔥 instant UI update
-    setCart((prev) => {
-      const existing = prev.find(
-        (item) => item.productId === product.id
-      );
+    const tempId = Date.now();
+    const existing = cart.find(
+      (item) => item.productId === product.id
+    );
 
-      if (existing) {
-        return prev.map((item) =>
+    if (existing) {
+      setCart((prev) =>
+        prev.map((item) =>
           item.productId === product.id
-            ? {
-                ...item,
-                quantity: item.quantity + quantity,
-              }
+            ? { ...item, quantity: item.quantity + quantity }
             : item
-        );
-      }
-
-      return [
+        )
+      );
+    } else {
+      setCart((prev) => [
         ...prev,
         {
-          id: Date.now(), // temp id
+          id: tempId,
           productId: product.id,
           name: product.name,
           price: product.price,
@@ -54,38 +63,76 @@ export function CartProvider({ children }) {
           quantity,
           stock: product.stock,
         },
-      ];
-    });
+      ]);
+    }
 
     try {
-      await api.post("/cart/add", {
+      const res = await api.post("/cart/add", {
         productId: product.id,
         quantity,
       });
-    } catch {
-      // rollback if API fails
+
       setCart((prev) =>
-        prev.filter((item) => item.productId !== product.id)
+        prev.map((item) =>
+          item.id === tempId || item.productId === product.id
+            ? res.data
+            : item
+        )
+      );
+    } catch (err) {
+      if (existing) {
+        setCart((prev) =>
+          prev.map((item) =>
+            item.productId === product.id
+              ? { ...item, quantity: item.quantity - quantity }
+              : item
+          )
+        );
+      } else {
+        setCart((prev) =>
+          prev.filter((item) => item.id !== tempId)
+        );
+      }
+      throw err;
+    }
+  };
+
+  const updateQuantity = async (itemId, newQuantity) => {
+    const item = cart.find((i) => i.id === itemId);
+    if (!item) return;
+
+    const oldQuantity = item.quantity;
+
+    setCart((prev) =>
+      prev.map((i) =>
+        i.id === itemId ? { ...i, quantity: newQuantity } : i
+      )
+    );
+
+    try {
+      const endpoint =
+        newQuantity > oldQuantity ? "increase" : "decrease";
+      await api.put(`/cart/${endpoint}/${itemId}`);
+    } catch {
+      setCart((prev) =>
+        prev.map((i) =>
+          i.id === itemId ? { ...i, quantity: oldQuantity } : i
+        )
       );
     }
   };
 
-  // ✅ REMOVE FROM CART
-  const removeFromCart = async (productId) => {
+  const removeFromCart = async (itemId) => {
     const backup = cart;
-
-    setCart((prev) =>
-      prev.filter((item) => item.productId !== productId)
-    );
+    setCart((prev) => prev.filter((i) => i.id !== itemId));
 
     try {
-      await api.delete(`/cart/remove/${productId}`);
+      await api.delete(`/cart/${itemId}`);
     } catch {
       setCart(backup);
     }
   };
 
-  // ✅ CLEAR CART
   const clearCart = async () => {
     const backup = cart;
     setCart([]);
@@ -101,7 +148,9 @@ export function CartProvider({ children }) {
     <CartContext.Provider
       value={{
         cart,
+        cartLoading,
         addToCart,
+        updateQuantity,
         removeFromCart,
         clearCart,
       }}
