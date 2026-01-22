@@ -61,7 +61,7 @@ export default function ProductDetails() {
         </button>
 
         <div className="details">
-          <img src={product.imageUrl} alt={product.name} />
+          <img src={product.imageUrl} alt={product.name} loading="eager" decoding="async" />
 
           <div className="details-info">
             <h2>{product.name}</h2>
@@ -97,7 +97,7 @@ export default function ProductDetails() {
                   className="card"
                   onClick={() => navigate(`/product/${r.id}`)}
                 >
-                  <img src={r.imageUrl} alt={r.name} />
+                  <img src={r.imageUrl} alt={r.name} loading="lazy" decoding="async" />
                   <h4>{r.name}</h4>
                   <p>₹{r.price}</p>
                 </div>

@@ -7,13 +7,21 @@ import { toast } from "react-toastify";
 export default function Home() {
   const [products, setProducts] = useState([]);
   const [addingId, setAddingId] = useState(null); // ✅ UX feedback
+  const [loading, setLoading] = useState(true); // ✅ Track loading state
 
   // LOAD RECOMMENDED PRODUCTS
   useEffect(() => {
+    setLoading(true);
     api
       .get("/products/recommended")
-      .then((res) => setProducts(res.data))
-      .catch(() => toast.error("Failed to load products"));
+      .then((res) => {
+        setProducts(res.data);
+        setLoading(false);
+      })
+      .catch(() => {
+        toast.error("Failed to load products");
+        setLoading(false);
+      });
   }, []);
 
   // ADD TO CART (FAST FEEL)
@@ -57,35 +65,49 @@ export default function Home() {
         <h2 className="section-title">Recommended Products</h2>
 
         <div className="grid">
-          {products.map((p) => (
-            <div key={p.id} className="card">
-              <img src={p.imageUrl} alt={p.name} />
+          {loading || products.length === 0 ? (
+            // Show skeleton cards while loading or no products
+            [...Array(8)].map((_, i) => (
+              <div key={i} className="card skeleton-card">
+                <div className="skeleton skeleton-image"></div>
+                <div className="skeleton skeleton-title"></div>
+                <div className="skeleton skeleton-price"></div>
+                <div className="skeleton skeleton-stock"></div>
+                <div className="skeleton skeleton-button"></div>
+              </div>
+            ))
+          ) : (
+            // Show real products after successful load
+            products.map((p) => (
+              <div key={p.id} className="card">
+                <img src={p.imageUrl} alt={p.name} loading="lazy" decoding="async" />
 
-              <h4>{p.name}</h4>
-              <div className="price">₹{p.price}</div>
+                <h4>{p.name}</h4>
+                <div className="price">₹{p.price}</div>
 
-              {p.stock === 0 ? (
-                <div style={{ color: "red", fontSize: 14 }}>
-                  Out of Stock
-                </div>
-              ) : (
-                <div style={{ color: "green", fontSize: 14 }}>
-                  Only {p.stock} left
-                </div>
-              )}
+                {p.stock === 0 ? (
+                  <div style={{ color: "red", fontSize: 14 }}>
+                    Out of Stock
+                  </div>
+                ) : (
+                  <div style={{ color: "green", fontSize: 14 }}>
+                    Only {p.stock} left
+                  </div>
+                )}
 
-              {p.stock === 0 ? (
-                <button disabled>Out of Stock</button>
-              ) : (
-                <button
-                  onClick={() => addToCart(p)}
-                  disabled={addingId === p.id}
-                >
-                  {addingId === p.id ? "Adding..." : "Add to Cart"}
-                </button>
-              )}
-            </div>
-          ))}
+                {p.stock === 0 ? (
+                  <button disabled>Out of Stock</button>
+                ) : (
+                  <button
+                    onClick={() => addToCart(p)}
+                    disabled={addingId === p.id}
+                  >
+                    {addingId === p.id ? "Adding..." : "Add to Cart"}
+                  </button>
+                )}
+              </div>
+            ))
+          )}
         </div>
 
         <h2 className="section-title" style={{ marginTop: 48 }}>
